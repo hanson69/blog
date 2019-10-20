@@ -1,5 +1,5 @@
 ---
-title: PostgreSQL事务隔离级别测试
+title: PG事务隔离级别
 date: 2019-10-20 23:51:24
 categories:PG基础
 tags:
