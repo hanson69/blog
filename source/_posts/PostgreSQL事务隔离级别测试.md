@@ -1,20 +1,20 @@
 ---
-title: PostgreSQL事务隔离级别测试
+title: PostgreSQL������뼶�����
 date: 2019-10-20 23:51:24
-categories:PG基础
+categories:PG����
 tags:
-- 事务隔离级别
+- ������뼶��
 - MVCC
 ---
 
 
-- PostgreSQL 更新和删除数据时, 并不是直接删除行的数据, 而是更新行的头部信息中的xmax和infomask掩码。事务提交后更新当前数据库集群的事务状态和pg_clog中的事务提交状态。
+- PostgreSQL ���º�ɾ������ʱ, ������ֱ��ɾ���е�����, ���Ǹ����е�ͷ����Ϣ�е�xmax��infomask���롣�����ύ����µ�ǰ���ݿ⼯Ⱥ������״̬��pg_clog�е������ύ״̬��
 
-- PostgreSQL多版本并发控制不需要UNDO表空间。
+- PostgreSQL��汾�������Ʋ���ҪUNDO���ռ䡣
 
-- PostgreSQL的repeatable read隔离级别不会产生幻像读
+- PostgreSQL��repeatable read���뼶�𲻻���������
 
-## READ UNCOMMITTED 测试
+## READ UNCOMMITTED ����
 
 ```SQL
 -- session A
@@ -25,7 +25,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 行记录)
+(2 �м�¼)
 
 postgres=# update tb1 set name='a' where id=1;
 UPDATE 1
@@ -35,11 +35,11 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
 
 -- session B
--- 没有读出session A 的更改
+-- û�ж���session A �ĸ���
 postgres=# begin isolation level READ UNCOMMITTED;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -47,7 +47,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 行记录)
+(2 �м�¼)
 
 -- session A
 postgres=# commit;
@@ -58,13 +58,13 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
 ```
-从上面测试可以看出，PostgreSQL不支持read uncommitted事务隔离级别。
+��������Կ��Կ�����PostgreSQL��֧��read uncommitted������뼶��
 
 
-## READ COMMITTED 测试
+## READ COMMITTED ����
 ```sql
 
 postgres=# create table tb1(id int, name text);
@@ -76,27 +76,27 @@ postgres=# insert into tb1 values(2, 'b');
 -- session A
 postgres=# begin;
 BEGIN
--- a, b分别是事务id 495和497创建
+-- a, b�ֱ�������id 495��497����
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,1) |  495 |    0 |  1 | a
  (0,2) |  497 |    0 |  2 | b
-(2 行记录)
+(2 �м�¼)
 
 
 -- session B
 postgres=# begin;
 BEGIN
 
--- 会话B创建事务块，id为498
+-- �ỰB��������飬idΪ498
 postgres=# select  txid_current();
  txid_current
 --------------
           498
-(1 行记录)
+(1 �м�¼)
 
--- 更新id=1的name='A'
+-- ����id=1��name='A'
 postgres=# update tb1 set name='A' where id=1;
 UPDATE 1
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -104,30 +104,30 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 行记录)
+(2 �м�¼)
 
 -- session A
--- 会话A看不到事务B的更改（RC），但是id=1这一行xmax已经变为会话A的事务id，说明改行记录已经被事务号为498更改
+-- �ỰA����������B�ĸ��ģ�RC��������id=1��һ��xmax�Ѿ���Ϊ�ỰA������id��˵�����м�¼�Ѿ��������Ϊ498����
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,1) |  495 |  498 |  1 | a
  (0,2) |  497 |    0 |  2 | b
-(2 行记录)
+(2 �м�¼)
 
--- 事务B提交
+-- ����B�ύ
 -- session B
 postgres=# commit;
 COMMIT
 
--- 事务A能够看到事务B提交后的更改数据，并且改行记录的xmax为0
+-- ����A�ܹ���������B�ύ��ĸ������ݣ����Ҹ��м�¼��xmaxΪ0
 session A
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 行记录)
+(2 �м�¼)
 
 
 postgres=# select * from heap_page_items(get_raw_page('tb1', 0));
@@ -136,12 +136,12 @@ postgres=# select * from heap_page_items(get_raw_page('tb1', 0));
   1 |   8160 |        1 |     30 |    495 |    498 |        0 | (0,3)  |       16386 |       1282 |     24 |        |       | \x010000000561
   2 |   8128 |        1 |     30 |    497 |      0 |        0 | (0,2)  |           2 |       2306 |     24 |        |       | \x020000000562
   3 |   8096 |        1 |     30 |    498 |      0 |        0 | (0,3)  |       32770 |      10498 |     24 |        |       | \x010000000541
-(3 行记录)
+(3 �м�¼)
 
 ```
-PostgreSQL 更新和删除数据时, 并不是直接删除行的数据, 而是更新行的头部信息中的xmax和infomask掩码。
+PostgreSQL ���º�ɾ������ʱ, ������ֱ��ɾ���е�����, ���Ǹ����е�ͷ����Ϣ�е�xmax��infomask���롣
 
-## REPEATABLE READ 测试
+## REPEATABLE READ ����
 ```SQL
 -- session A
 postgres=# begin isolation level REPEATABLE READ;
@@ -151,10 +151,10 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
 -- session B
--- session B 修改数据, 并提交
+-- session B �޸�����, ���ύ
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -162,7 +162,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
 postgres=# update tb1 set name='A' where id=1;
 UPDATE 1
@@ -171,21 +171,21 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
-(2 行记录)
+(2 �м�¼)
 
 postgres=# commit;
 COMMIT
 
 -- session A
--- 未出现不可重复读现象
+-- δ���ֲ����ظ�������
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |  501 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
--- session C 新增数据并提交
+-- session C �������ݲ��ύ
 postgres=# begin;
 BEGIN
 postgres=# insert into tb1 values(3, 'c');
@@ -196,25 +196,25 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 行记录)
+(3 �м�¼)
 
 postgres=# commit;
 COMMIT
 
 -- session A
--- 未出现幻象读
+-- δ���ֻ����
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |  501 |  1 | a
-(2 行记录)
+(2 �м�¼)
 
 ```
 
 
-## PostgresSQL 幻读情景
-PostgresSQL 的 REPEATABLE READ 不会出现幻读，可以通过 READ COMMITTED 测试幻读
+## PostgresSQL �ö��龰
+PostgresSQL �� REPEATABLE READ ������ֻö�������ͨ�� READ COMMITTED ���Իö�
 
 ```
 -- session A
@@ -226,9 +226,9 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 行记录)
+(3 �м�¼)
 
--- session B 删除一条记录并提交
+-- session B ɾ��һ����¼���ύ
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -237,7 +237,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 行记录)
+(3 �м�¼)
 
 
 postgres=# delete from tb1 where id=1;
@@ -247,20 +247,20 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 行记录)
+(2 �м�¼)
 
 postgres=# commit;
 
--- session A 幻读（刚刚读的时候3条记录，现在是2条记录）
+-- session A �ö����ոն���ʱ��3����¼��������2����¼��
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 行记录)
+(2 �м�¼)
 
 
--- session C 插入一条记录
+-- session C ����һ����¼
 postgres=# begin;
 BEGIN
 postgres=# insert into tb1 values(4, 'c');
@@ -271,23 +271,23 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 行记录)
+(3 �м�¼)
 
 postgres=# commit;
 
 
--- session A 再次幻读（刚刚读取的记录中没有id=4的记录）
+-- session A �ٴλö����ոն�ȡ�ļ�¼��û��id=4�ļ�¼��
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 行记录)
+(3 �м�¼)
 
 ```
 
-## REPEATABLE READ 异常测试
+## REPEATABLE READ �쳣����
 
 ```sql
 -- session A
@@ -299,9 +299,9 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 行记录)
+(3 �м�¼)
 
--- session B 更新或者删除id=4记录, 并提交.
+-- session B ���»���ɾ��id=4��¼, ���ύ.
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -310,7 +310,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 行记录)
+(3 �м�¼)
 
 postgres=# delete from tb1 where id=4;
 DELETE 1
@@ -319,18 +319,18 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 行记录)
+(2 �м�¼)
 
 postgres=# commit;
 
--- session A 更新或者删除id=4这条记录. 会报错回滚
+-- session A ���»���ɾ��id=4������¼. �ᱨ���ع�
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |  504 |  4 | c
-(3 行记录)
+(3 �м�¼)
 
 postgres=# update tb1 set name='d' where id=4;
 ERROR:  could not serialize access due to concurrent delete
@@ -339,14 +339,14 @@ ERROR:  could not serialize access due to concurrent delete
 ```
 
 
-## SERIALIZABLE 测试
+## SERIALIZABLE ����
 ```
 -- session A
 postgres=# select pg_backend_pid();
  pg_backend_pid
 ----------------
           24300
-(1 行记录)
+(1 �м�¼)
 
 postgres=# truncate tb1;
 TRUNCATE TABLE
@@ -358,7 +358,7 @@ postgres=# select sum(id) from tb1 where id=100;
  sum
 -----
  100
-(1 行记录)
+(1 �м�¼)
 
 
 -- session B
@@ -366,7 +366,7 @@ postgres=# select pg_backend_pid();
  pg_backend_pid
 ----------------
           10456
-(1 行记录)
+(1 �м�¼)
 
 
 -- session C
@@ -376,7 +376,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  tb1      | relation   | 24300 | AccessShareLock | t
           | virtualxid | 24300 | ExclusiveLock   | t
  tb1      | relation   | 24300 | SIReadLock      | t
-(3 行记录)
+(3 �м�¼)
 
 
 -- session B
@@ -386,7 +386,7 @@ postgres=# select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 行记录)
+(1 �м�¼)
 
 
 -- session C
@@ -399,7 +399,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | virtualxid | 24300 | ExclusiveLock   | t
  tb1      | relation   | 10456 | SIReadLock      | t
  tb1      | relation   | 24300 | SIReadLock      | t
-(6 行记录)
+(6 �м�¼)
 
 
 -- session A
@@ -424,7 +424,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  tb1      | relation      | 24300 | RowExclusiveLock | t
           | virtualxid    | 24300 | ExclusiveLock    | t
           | transactionid | 24300 | ExclusiveLock    | t
-(10 行记录)
+(10 �м�¼)
 
 -- session A
 postgres=# commit;
@@ -440,25 +440,25 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | transactionid | 10456 | ExclusiveLock    | t
  tb1      | relation      | 10456 | SIReadLock       | t
  tb1      | relation      | 24300 | SIReadLock       | t
-(6 行记录)
+(6 �м�¼)
 
 -- session B
 postgres=# commit;
 ERROR:  could not serialize access due to read/write dependencies among transactions
-描述:  Reason code: Canceled on identification as a pivot, during commit attempt.
-提示:  The transaction might succeed if retried.
+����:  Reason code: Canceled on identification as a pivot, during commit attempt.
+��ʾ:  The transaction might succeed if retried.
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation | locktype | pid | mode | granted
 ----------+----------+-----+------+---------
-(0 行记录)
+(0 �м�¼)
 
 
 ```
 
 
-## 加索引测试上面的场景
+## ��������������ĳ���
 ```
 -- session A
 postgres=# create index idx_tb1 on tb1(id);
@@ -467,7 +467,7 @@ postgres=# begin ISOLATION LEVEL SERIALIZABLE;
 BEGIN
 
 -- session C
--- 这里变成了行锁和页锁
+-- ��������������ҳ��
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |  locktype  |  pid  |      mode       | granted
 ----------+------------+-------+-----------------+---------
@@ -476,7 +476,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | virtualxid | 24300 | ExclusiveLock   | t
  idx_tb1  | page       | 24300 | SIReadLock      | t
  tb1      | tuple      | 24300 | SIReadLock      | t
-(5 行记录)
+(5 �м�¼)
 
 -- session B
 postgres=# begin ISOLATION LEVEL SERIALIZABLE;
@@ -485,7 +485,7 @@ postgres=#  select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 行记录)
+(1 �м�¼)
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
@@ -501,7 +501,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | page       | 24300 | SIReadLock      | t
  idx_tb1  | relation   | 24300 | AccessShareLock | t
  tb1      | relation   | 24300 | AccessShareLock | t
-(10 行记录)
+(10 �м�¼)
 
 
 -- session A
@@ -509,7 +509,7 @@ postgres=# insert into tb1 values(1, 'a');
 INSERT 0 1
 
 -- session C
--- 事务 24300 获得 行互斥锁
+-- ���� 24300 ��� �л�����
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |   locktype    |  pid  |       mode       | granted
 ----------+---------------+-------+------------------+---------
@@ -525,7 +525,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | page          | 24300 | SIReadLock       | t
  idx_tb1  | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | AccessShareLock  | t
-(12 行记录)
+(12 �м�¼)
 
 -- session B
 postgres=# insert into tb1 values(2, 'b');
@@ -533,7 +533,7 @@ INSERT 0 1
 
 
 -- session C
--- -- 事务 10456 获得 行互斥锁
+-- -- ���� 10456 ��� �л�����
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |   locktype    |  pid  |       mode       | granted
 ----------+---------------+-------+------------------+---------
@@ -551,27 +551,27 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | RowExclusiveLock | t
-(14 行记录)
+(14 �м�¼)
 
 -- session A
 postgres=# commit;
 COMMIT
 
 -- session B
--- 索引页用了同一个, 并且被插入语句更新了. 所以发生了冲突
+-- ����ҳ����ͬһ��, ���ұ�������������. ���Է����˳�ͻ
 postgres=# commit;
 ERROR:  could not serialize access due to read/write dependencies among transactions
-描述:  Reason code: Canceled on identification as a pivot, during commit attempt.
-提示:  The transaction might succeed if retried.
+����:  Reason code: Canceled on identification as a pivot, during commit attempt.
+��ʾ:  The transaction might succeed if retried.
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation | locktype | pid | mode | granted
 ----------+----------+-----+------+---------
-(0 行记录)
+(0 �м�¼)
 
 
--- 如果其中一个插入的值不在1号索引页则没有问题, 例如
+-- �������һ�������ֵ����1������ҳ��û������, ����
 -- session A
 postgres=# begin ISOLATION LEVEL SERIALIZABLE;
 BEGIN
@@ -579,7 +579,7 @@ postgres=# select sum(id) from tb1 where id=100;
  sum
 -----
  100
-(1 行记录)
+(1 �м�¼)
 
 
 -- session B
@@ -589,7 +589,7 @@ postgres=# select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 行记录)
+(1 �м�¼)
 
 
 -- session A
@@ -605,26 +605,25 @@ postgres=# commit;
 COMMIT
 
 ```
-> 注意事项:
+> ע������:
 >
-> PostgreSQL 的 hot_standby节点不支持串行事务隔离级别, 只能支持read committed和repeatable read隔离级别
+> PostgreSQL �� hot_standby�ڵ㲻֧�ִ���������뼶��, ֻ��֧��read committed��repeatable read���뼶��
 
 
 
-## PostgreSQL多版本并发控制
+## PostgreSQL��汾��������
 
 ```
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RC1 tuple-v1 IDLE IN TRANSACTION;
- RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RC1 tuple-v2 IDLE IN TRANSACTION;
- RR2 tuple-v2 IDLE IN TRANSACTION;
- RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RR2 tuple-v2 IDLE IN TRANSACTION;
- RC1 tuple-v3 IDLE IN TRANSACTION;
+? RR1 tuple-v1 IDLE IN TRANSACTION;
+? RC1 tuple-v1 IDLE IN TRANSACTION;
+? RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
+? RR1 tuple-v1 IDLE IN TRANSACTION;
+? RC1 tuple-v2 IDLE IN TRANSACTION;
+? RR2 tuple-v2 IDLE IN TRANSACTION;
+? RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
+? RR1 tuple-v1 IDLE IN TRANSACTION;
+? RR2 tuple-v2 IDLE IN TRANSACTION;
+? RC1 tuple-v3 IDLE IN TRANSACTION;
 ```
 
-PostgreSQL多版本并发控制不需要UNDO表空间。
-
+PostgreSQL��汾�������Ʋ���ҪUNDO���ռ䡣
