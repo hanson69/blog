@@ -1,20 +1,20 @@
 ---
-title: PGÊÂÎñ¸ôÀë¼¶±ğ
+title: PGäº‹åŠ¡éš”ç¦»çº§åˆ«
 date: 2019-10-20 23:51:24
-categories: PG»ù´¡
+categories: PGåŸºç¡€
 tags:
-- ÊÂÎñ¸ôÀë¼¶±ğ
+- äº‹åŠ¡éš”ç¦»çº§åˆ«
 - MVCC
 ---
 
 
-- PostgreSQL ¸üĞÂºÍÉ¾³ıÊı¾İÊ±, ²¢²»ÊÇÖ±½ÓÉ¾³ıĞĞµÄÊı¾İ, ¶øÊÇ¸üĞÂĞĞµÄÍ·²¿ĞÅÏ¢ÖĞµÄxmaxºÍinfomaskÑÚÂë¡£ÊÂÎñÌá½»ºó¸üĞÂµ±Ç°Êı¾İ¿â¼¯ÈºµÄÊÂÎñ×´Ì¬ºÍpg_clogÖĞµÄÊÂÎñÌá½»×´Ì¬¡£
+- PostgreSQL æ›´æ–°å’Œåˆ é™¤æ•°æ®æ—¶, å¹¶ä¸æ˜¯ç›´æ¥åˆ é™¤è¡Œçš„æ•°æ®, è€Œæ˜¯æ›´æ–°è¡Œçš„å¤´éƒ¨ä¿¡æ¯ä¸­çš„xmaxå’Œinfomaskæ©ç ã€‚äº‹åŠ¡æäº¤åæ›´æ–°å½“å‰æ•°æ®åº“é›†ç¾¤çš„äº‹åŠ¡çŠ¶æ€å’Œpg_clogä¸­çš„äº‹åŠ¡æäº¤çŠ¶æ€ã€‚
 
-- PostgreSQL¶à°æ±¾²¢·¢¿ØÖÆ²»ĞèÒªUNDO±í¿Õ¼ä¡£
+- PostgreSQLå¤šç‰ˆæœ¬å¹¶å‘æ§åˆ¶ä¸éœ€è¦UNDOè¡¨ç©ºé—´ã€‚
 
-- PostgreSQLµÄrepeatable read¸ôÀë¼¶±ğ²»»á²úÉú»ÃÏñ¶Á
+- PostgreSQLçš„repeatable readéš”ç¦»çº§åˆ«ä¸ä¼šäº§ç”Ÿå¹»åƒè¯»
 
-## READ UNCOMMITTED ²âÊÔ
+## READ UNCOMMITTED æµ‹è¯•
 
 ```SQL
 -- session A
@@ -25,7 +25,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 postgres=# update tb1 set name='a' where id=1;
 UPDATE 1
@@ -35,11 +35,11 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 
 -- session B
--- Ã»ÓĞ¶Á³ösession A µÄ¸ü¸Ä
+-- æ²¡æœ‰è¯»å‡ºsession A çš„æ›´æ”¹
 postgres=# begin isolation level READ UNCOMMITTED;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -47,7 +47,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 -- session A
 postgres=# commit;
@@ -58,13 +58,13 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 ```
-´ÓÉÏÃæ²âÊÔ¿ÉÒÔ¿´³ö£¬PostgreSQL²»Ö§³Öread uncommittedÊÂÎñ¸ôÀë¼¶±ğ¡£
+ä»ä¸Šé¢æµ‹è¯•å¯ä»¥çœ‹å‡ºï¼ŒPostgreSQLä¸æ”¯æŒread uncommittedäº‹åŠ¡éš”ç¦»çº§åˆ«ã€‚
 
 
-## READ COMMITTED ²âÊÔ
+## READ COMMITTED æµ‹è¯•
 ```sql
 
 postgres=# create table tb1(id int, name text);
@@ -76,27 +76,27 @@ postgres=# insert into tb1 values(2, 'b');
 -- session A
 postgres=# begin;
 BEGIN
--- a, b·Ö±ğÊÇÊÂÎñid 495ºÍ497´´½¨
+-- a, båˆ†åˆ«æ˜¯äº‹åŠ¡id 495å’Œ497åˆ›å»º
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,1) |  495 |    0 |  1 | a
  (0,2) |  497 |    0 |  2 | b
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 
 -- session B
 postgres=# begin;
 BEGIN
 
--- »á»°B´´½¨ÊÂÎñ¿é£¬idÎª498
+-- ä¼šè¯Båˆ›å»ºäº‹åŠ¡å—ï¼Œidä¸º498
 postgres=# select  txid_current();
  txid_current
 --------------
           498
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
--- ¸üĞÂid=1µÄname='A'
+-- æ›´æ–°id=1çš„name='A'
 postgres=# update tb1 set name='A' where id=1;
 UPDATE 1
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -104,30 +104,30 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 -- session A
--- »á»°A¿´²»µ½ÊÂÎñBµÄ¸ü¸Ä£¨RC£©£¬µ«ÊÇid=1ÕâÒ»ĞĞxmaxÒÑ¾­±äÎª»á»°AµÄÊÂÎñid£¬ËµÃ÷¸ÄĞĞ¼ÇÂ¼ÒÑ¾­±»ÊÂÎñºÅÎª498¸ü¸Ä
+-- ä¼šè¯Açœ‹ä¸åˆ°äº‹åŠ¡Bçš„æ›´æ”¹ï¼ˆRCï¼‰ï¼Œä½†æ˜¯id=1è¿™ä¸€è¡Œxmaxå·²ç»å˜ä¸ºä¼šè¯Açš„äº‹åŠ¡idï¼Œè¯´æ˜æ”¹è¡Œè®°å½•å·²ç»è¢«äº‹åŠ¡å·ä¸º498æ›´æ”¹
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,1) |  495 |  498 |  1 | a
  (0,2) |  497 |    0 |  2 | b
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
--- ÊÂÎñBÌá½»
+-- äº‹åŠ¡Bæäº¤
 -- session B
 postgres=# commit;
 COMMIT
 
--- ÊÂÎñAÄÜ¹»¿´µ½ÊÂÎñBÌá½»ºóµÄ¸ü¸ÄÊı¾İ£¬²¢ÇÒ¸ÄĞĞ¼ÇÂ¼µÄxmaxÎª0
+-- äº‹åŠ¡Aèƒ½å¤Ÿçœ‹åˆ°äº‹åŠ¡Bæäº¤åçš„æ›´æ”¹æ•°æ®ï¼Œå¹¶ä¸”æ”¹è¡Œè®°å½•çš„xmaxä¸º0
 session A
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,3) |  498 |    0 |  1 | A
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 
 postgres=# select * from heap_page_items(get_raw_page('tb1', 0));
@@ -136,12 +136,12 @@ postgres=# select * from heap_page_items(get_raw_page('tb1', 0));
   1 |   8160 |        1 |     30 |    495 |    498 |        0 | (0,3)  |       16386 |       1282 |     24 |        |       | \x010000000561
   2 |   8128 |        1 |     30 |    497 |      0 |        0 | (0,2)  |           2 |       2306 |     24 |        |       | \x020000000562
   3 |   8096 |        1 |     30 |    498 |      0 |        0 | (0,3)  |       32770 |      10498 |     24 |        |       | \x010000000541
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 ```
-PostgreSQL ¸üĞÂºÍÉ¾³ıÊı¾İÊ±, ²¢²»ÊÇÖ±½ÓÉ¾³ıĞĞµÄÊı¾İ, ¶øÊÇ¸üĞÂĞĞµÄÍ·²¿ĞÅÏ¢ÖĞµÄxmaxºÍinfomaskÑÚÂë¡£
+PostgreSQL æ›´æ–°å’Œåˆ é™¤æ•°æ®æ—¶, å¹¶ä¸æ˜¯ç›´æ¥åˆ é™¤è¡Œçš„æ•°æ®, è€Œæ˜¯æ›´æ–°è¡Œçš„å¤´éƒ¨ä¿¡æ¯ä¸­çš„xmaxå’Œinfomaskæ©ç ã€‚
 
-## REPEATABLE READ ²âÊÔ
+## REPEATABLE READ æµ‹è¯•
 ```SQL
 -- session A
 postgres=# begin isolation level REPEATABLE READ;
@@ -151,10 +151,10 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 -- session B
--- session B ĞŞ¸ÄÊı¾İ, ²¢Ìá½»
+-- session B ä¿®æ”¹æ•°æ®, å¹¶æäº¤
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -162,7 +162,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |    0 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 postgres=# update tb1 set name='A' where id=1;
 UPDATE 1
@@ -171,21 +171,21 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 postgres=# commit;
 COMMIT
 
 -- session A
--- Î´³öÏÖ²»¿ÉÖØ¸´¶ÁÏÖÏó
+-- æœªå‡ºç°ä¸å¯é‡å¤è¯»ç°è±¡
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |  501 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
--- session C ĞÂÔöÊı¾İ²¢Ìá½»
+-- session C æ–°å¢æ•°æ®å¹¶æäº¤
 postgres=# begin;
 BEGIN
 postgres=# insert into tb1 values(3, 'c');
@@ -196,25 +196,25 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 postgres=# commit;
 COMMIT
 
 -- session A
--- Î´³öÏÖ»ÃÏó¶Á
+-- æœªå‡ºç°å¹»è±¡è¯»
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,4) |  500 |  501 |  1 | a
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 ```
 
 
-## PostgresSQL »Ã¶ÁÇé¾°
-PostgresSQL µÄ REPEATABLE READ ²»»á³öÏÖ»Ã¶Á£¬¿ÉÒÔÍ¨¹ı READ COMMITTED ²âÊÔ»Ã¶Á
+## PostgresSQL å¹»è¯»æƒ…æ™¯
+PostgresSQL çš„ REPEATABLE READ ä¸ä¼šå‡ºç°å¹»è¯»ï¼Œå¯ä»¥é€šè¿‡ READ COMMITTED æµ‹è¯•å¹»è¯»
 
 ```
 -- session A
@@ -226,9 +226,9 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
--- session B É¾³ıÒ»Ìõ¼ÇÂ¼²¢Ìá½»
+-- session B åˆ é™¤ä¸€æ¡è®°å½•å¹¶æäº¤
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -237,7 +237,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,5) |  501 |    0 |  1 | A
  (0,6) |  501 |    0 |  3 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 
 postgres=# delete from tb1 where id=1;
@@ -247,20 +247,20 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 postgres=# commit;
 
--- session A »Ã¶Á£¨¸Õ¸Õ¶ÁµÄÊ±ºò3Ìõ¼ÇÂ¼£¬ÏÖÔÚÊÇ2Ìõ¼ÇÂ¼£©
+-- session A å¹»è¯»ï¼ˆåˆšåˆšè¯»çš„æ—¶å€™3æ¡è®°å½•ï¼Œç°åœ¨æ˜¯2æ¡è®°å½•ï¼‰
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 
--- session C ²åÈëÒ»Ìõ¼ÇÂ¼
+-- session C æ’å…¥ä¸€æ¡è®°å½•
 postgres=# begin;
 BEGIN
 postgres=# insert into tb1 values(4, 'c');
@@ -271,23 +271,23 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 postgres=# commit;
 
 
--- session A ÔÙ´Î»Ã¶Á£¨¸Õ¸Õ¶ÁÈ¡µÄ¼ÇÂ¼ÖĞÃ»ÓĞid=4µÄ¼ÇÂ¼£©
+-- session A å†æ¬¡å¹»è¯»ï¼ˆåˆšåˆšè¯»å–çš„è®°å½•ä¸­æ²¡æœ‰id=4çš„è®°å½•ï¼‰
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 ```
 
-## REPEATABLE READ Òì³£²âÊÔ
+## REPEATABLE READ å¼‚å¸¸æµ‹è¯•
 
 ```sql
 -- session A
@@ -299,9 +299,9 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
--- session B ¸üĞÂ»òÕßÉ¾³ıid=4¼ÇÂ¼, ²¢Ìá½».
+-- session B æ›´æ–°æˆ–è€…åˆ é™¤id=4è®°å½•, å¹¶æäº¤.
 postgres=# begin;
 BEGIN
 postgres=# select ctid, xmin, xmax, * from tb1;
@@ -310,7 +310,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |    0 |  4 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 postgres=# delete from tb1 where id=4;
 DELETE 1
@@ -319,18 +319,18 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
-(2 ĞĞ¼ÇÂ¼)
+(2 è¡Œè®°å½•)
 
 postgres=# commit;
 
--- session A ¸üĞÂ»òÕßÉ¾³ıid=4ÕâÌõ¼ÇÂ¼. »á±¨´í»Ø¹ö
+-- session A æ›´æ–°æˆ–è€…åˆ é™¤id=4è¿™æ¡è®°å½•. ä¼šæŠ¥é”™å›æ»š
 postgres=# select ctid, xmin, xmax, * from tb1;
  ctid  | xmin | xmax | id | name
 -------+------+------+----+------
  (0,2) |  497 |    0 |  2 | b
  (0,6) |  501 |    0 |  3 | c
  (0,7) |  503 |  504 |  4 | c
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 postgres=# update tb1 set name='d' where id=4;
 ERROR:  could not serialize access due to concurrent delete
@@ -339,14 +339,14 @@ ERROR:  could not serialize access due to concurrent delete
 ```
 
 
-## SERIALIZABLE ²âÊÔ
+## SERIALIZABLE æµ‹è¯•
 ```
 -- session A
 postgres=# select pg_backend_pid();
  pg_backend_pid
 ----------------
           24300
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 postgres=# truncate tb1;
 TRUNCATE TABLE
@@ -358,7 +358,7 @@ postgres=# select sum(id) from tb1 where id=100;
  sum
 -----
  100
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 
 -- session B
@@ -366,7 +366,7 @@ postgres=# select pg_backend_pid();
  pg_backend_pid
 ----------------
           10456
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 
 -- session C
@@ -376,7 +376,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  tb1      | relation   | 24300 | AccessShareLock | t
           | virtualxid | 24300 | ExclusiveLock   | t
  tb1      | relation   | 24300 | SIReadLock      | t
-(3 ĞĞ¼ÇÂ¼)
+(3 è¡Œè®°å½•)
 
 
 -- session B
@@ -386,7 +386,7 @@ postgres=# select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 
 -- session C
@@ -399,7 +399,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | virtualxid | 24300 | ExclusiveLock   | t
  tb1      | relation   | 10456 | SIReadLock      | t
  tb1      | relation   | 24300 | SIReadLock      | t
-(6 ĞĞ¼ÇÂ¼)
+(6 è¡Œè®°å½•)
 
 
 -- session A
@@ -424,7 +424,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  tb1      | relation      | 24300 | RowExclusiveLock | t
           | virtualxid    | 24300 | ExclusiveLock    | t
           | transactionid | 24300 | ExclusiveLock    | t
-(10 ĞĞ¼ÇÂ¼)
+(10 è¡Œè®°å½•)
 
 -- session A
 postgres=# commit;
@@ -440,25 +440,25 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | transactionid | 10456 | ExclusiveLock    | t
  tb1      | relation      | 10456 | SIReadLock       | t
  tb1      | relation      | 24300 | SIReadLock       | t
-(6 ĞĞ¼ÇÂ¼)
+(6 è¡Œè®°å½•)
 
 -- session B
 postgres=# commit;
 ERROR:  could not serialize access due to read/write dependencies among transactions
-ÃèÊö:  Reason code: Canceled on identification as a pivot, during commit attempt.
-ÌáÊ¾:  The transaction might succeed if retried.
+æè¿°:  Reason code: Canceled on identification as a pivot, during commit attempt.
+æç¤º:  The transaction might succeed if retried.
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation | locktype | pid | mode | granted
 ----------+----------+-----+------+---------
-(0 ĞĞ¼ÇÂ¼)
+(0 è¡Œè®°å½•)
 
 
 ```
 
 
-## ¼ÓË÷Òı²âÊÔÉÏÃæµÄ³¡¾°
+## åŠ ç´¢å¼•æµ‹è¯•ä¸Šé¢çš„åœºæ™¯
 ```
 -- session A
 postgres=# create index idx_tb1 on tb1(id);
@@ -467,7 +467,7 @@ postgres=# begin ISOLATION LEVEL SERIALIZABLE;
 BEGIN
 
 -- session C
--- ÕâÀï±ä³ÉÁËĞĞËøºÍÒ³Ëø
+-- è¿™é‡Œå˜æˆäº†è¡Œé”å’Œé¡µé”
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |  locktype  |  pid  |      mode       | granted
 ----------+------------+-------+-----------------+---------
@@ -476,7 +476,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
           | virtualxid | 24300 | ExclusiveLock   | t
  idx_tb1  | page       | 24300 | SIReadLock      | t
  tb1      | tuple      | 24300 | SIReadLock      | t
-(5 ĞĞ¼ÇÂ¼)
+(5 è¡Œè®°å½•)
 
 -- session B
 postgres=# begin ISOLATION LEVEL SERIALIZABLE;
@@ -485,7 +485,7 @@ postgres=#  select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
@@ -501,7 +501,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | page       | 24300 | SIReadLock      | t
  idx_tb1  | relation   | 24300 | AccessShareLock | t
  tb1      | relation   | 24300 | AccessShareLock | t
-(10 ĞĞ¼ÇÂ¼)
+(10 è¡Œè®°å½•)
 
 
 -- session A
@@ -509,7 +509,7 @@ postgres=# insert into tb1 values(1, 'a');
 INSERT 0 1
 
 -- session C
--- ÊÂÎñ 24300 »ñµÃ ĞĞ»¥³âËø
+-- äº‹åŠ¡ 24300 è·å¾— è¡Œäº’æ–¥é”
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |   locktype    |  pid  |       mode       | granted
 ----------+---------------+-------+------------------+---------
@@ -525,7 +525,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | page          | 24300 | SIReadLock       | t
  idx_tb1  | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | AccessShareLock  | t
-(12 ĞĞ¼ÇÂ¼)
+(12 è¡Œè®°å½•)
 
 -- session B
 postgres=# insert into tb1 values(2, 'b');
@@ -533,7 +533,7 @@ INSERT 0 1
 
 
 -- session C
--- -- ÊÂÎñ 10456 »ñµÃ ĞĞ»¥³âËø
+-- -- äº‹åŠ¡ 10456 è·å¾— è¡Œäº’æ–¥é”
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation |   locktype    |  pid  |       mode       | granted
 ----------+---------------+-------+------------------+---------
@@ -551,27 +551,27 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
  idx_tb1  | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | AccessShareLock  | t
  tb1      | relation      | 24300 | RowExclusiveLock | t
-(14 ĞĞ¼ÇÂ¼)
+(14 è¡Œè®°å½•)
 
 -- session A
 postgres=# commit;
 COMMIT
 
 -- session B
--- Ë÷ÒıÒ³ÓÃÁËÍ¬Ò»¸ö, ²¢ÇÒ±»²åÈëÓï¾ä¸üĞÂÁË. ËùÒÔ·¢ÉúÁË³åÍ»
+-- ç´¢å¼•é¡µç”¨äº†åŒä¸€ä¸ª, å¹¶ä¸”è¢«æ’å…¥è¯­å¥æ›´æ–°äº†. æ‰€ä»¥å‘ç”Ÿäº†å†²çª
 postgres=# commit;
 ERROR:  could not serialize access due to read/write dependencies among transactions
-ÃèÊö:  Reason code: Canceled on identification as a pivot, during commit attempt.
-ÌáÊ¾:  The transaction might succeed if retried.
+æè¿°:  Reason code: Canceled on identification as a pivot, during commit attempt.
+æç¤º:  The transaction might succeed if retried.
 
 -- session C
 postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks where pid in (24300, 10456) order by pid;
  relation | locktype | pid | mode | granted
 ----------+----------+-----+------+---------
-(0 ĞĞ¼ÇÂ¼)
+(0 è¡Œè®°å½•)
 
 
--- Èç¹ûÆäÖĞÒ»¸ö²åÈëµÄÖµ²»ÔÚ1ºÅË÷ÒıÒ³ÔòÃ»ÓĞÎÊÌâ, ÀıÈç
+-- å¦‚æœå…¶ä¸­ä¸€ä¸ªæ’å…¥çš„å€¼ä¸åœ¨1å·ç´¢å¼•é¡µåˆ™æ²¡æœ‰é—®é¢˜, ä¾‹å¦‚
 -- session A
 postgres=# begin ISOLATION LEVEL SERIALIZABLE;
 BEGIN
@@ -579,7 +579,7 @@ postgres=# select sum(id) from tb1 where id=100;
  sum
 -----
  100
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 
 -- session B
@@ -589,7 +589,7 @@ postgres=# select sum(id) from tb1 where id=10;
  sum
 -----
   10
-(1 ĞĞ¼ÇÂ¼)
+(1 è¡Œè®°å½•)
 
 
 -- session A
@@ -605,13 +605,13 @@ postgres=# commit;
 COMMIT
 
 ```
-> ×¢ÒâÊÂÏî:
+> æ³¨æ„äº‹é¡¹:
 >
-> PostgreSQL µÄ hot_standby½Úµã²»Ö§³Ö´®ĞĞÊÂÎñ¸ôÀë¼¶±ğ, Ö»ÄÜÖ§³Öread committedºÍrepeatable read¸ôÀë¼¶±ğ
+> PostgreSQL çš„ hot_standbyèŠ‚ç‚¹ä¸æ”¯æŒä¸²è¡Œäº‹åŠ¡éš”ç¦»çº§åˆ«, åªèƒ½æ”¯æŒread committedå’Œrepeatable readéš”ç¦»çº§åˆ«
 
 
 
-## PostgreSQL¶à°æ±¾²¢·¢¿ØÖÆ
+## PostgreSQLå¤šç‰ˆæœ¬å¹¶å‘æ§åˆ¶
 
 ```
 ? RR1 tuple-v1 IDLE IN TRANSACTION;
@@ -626,4 +626,4 @@ COMMIT
 ? RC1 tuple-v3 IDLE IN TRANSACTION;
 ```
 
-PostgreSQL¶à°æ±¾²¢·¢¿ØÖÆ²»ĞèÒªUNDO±í¿Õ¼ä¡£
+PostgreSQLå¤šç‰ˆæœ¬å¹¶å‘æ§åˆ¶ä¸éœ€è¦UNDOè¡¨ç©ºé—´ã€‚
