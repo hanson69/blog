@@ -340,7 +340,7 @@ ERROR:  could not serialize access due to concurrent delete
 
 
 ## SERIALIZABLE 测试
-```
+```SQL
 -- session A
 postgres=# select pg_backend_pid();
  pg_backend_pid
@@ -459,7 +459,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
 
 
 ## 加索引测试上面的场景
-```
+```SQL
 -- session A
 postgres=# create index idx_tb1 on tb1(id);
 CREATE INDEX
@@ -613,17 +613,17 @@ COMMIT
 
 ## PostgreSQL多版本并发控制
 
-```
-? RR1 tuple-v1 IDLE IN TRANSACTION;
-? RC1 tuple-v1 IDLE IN TRANSACTION;
-? RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
-? RR1 tuple-v1 IDLE IN TRANSACTION;
-? RC1 tuple-v2 IDLE IN TRANSACTION;
-? RR2 tuple-v2 IDLE IN TRANSACTION;
-? RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
-? RR1 tuple-v1 IDLE IN TRANSACTION;
-? RR2 tuple-v2 IDLE IN TRANSACTION;
-? RC1 tuple-v3 IDLE IN TRANSACTION;
+```SQL
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RC1 tuple-v1 IDLE IN TRANSACTION;
+ RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RC1 tuple-v2 IDLE IN TRANSACTION;
+ RR2 tuple-v2 IDLE IN TRANSACTION;
+ RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RR2 tuple-v2 IDLE IN TRANSACTION;
+ RC1 tuple-v3 IDLE IN TRANSACTION;
 ```
 
 PostgreSQL多版本并发控制不需要UNDO表空间。
