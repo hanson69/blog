@@ -1,12 +1,11 @@
 ---
-title: PG事务隔离级别
+title: PG事务隔离级别测试
 date: 2019-10-20 23:51:24
 categories: PG基础
 tags:
 - 事务隔离级别
 - MVCC
 ---
-
 
 - PostgreSQL 更新和删除数据时, 并不是直接删除行的数据, 而是更新行的头部信息中的xmax和infomask掩码。事务提交后更新当前数据库集群的事务状态和pg_clog中的事务提交状态。
 
@@ -65,6 +64,7 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 
 
 ## READ COMMITTED 测试
+
 ```sql
 
 postgres=# create table tb1(id int, name text);
@@ -142,6 +142,7 @@ postgres=# select * from heap_page_items(get_raw_page('tb1', 0));
 PostgreSQL 更新和删除数据时, 并不是直接删除行的数据, 而是更新行的头部信息中的xmax和infomask掩码。
 
 ## REPEATABLE READ 测试
+
 ```SQL
 -- session A
 postgres=# begin isolation level REPEATABLE READ;
@@ -214,9 +215,10 @@ postgres=# select ctid, xmin, xmax, * from tb1;
 
 
 ## PostgresSQL 幻读情景
+
 PostgresSQL 的 REPEATABLE READ 不会出现幻读，可以通过 READ COMMITTED 测试幻读
 
-```
+```SQL
 -- session A
 postgres=# begin ISOLATION LEVEL READ COMMITTED;
 BEGIN
@@ -340,6 +342,7 @@ ERROR:  could not serialize access due to concurrent delete
 
 
 ## SERIALIZABLE 测试
+
 ```SQL
 -- session A
 postgres=# select pg_backend_pid();
@@ -459,6 +462,7 @@ postgres=# select relation::regclass, locktype, pid, mode, granted from pg_locks
 
 
 ## 加索引测试上面的场景
+
 ```SQL
 -- session A
 postgres=# create index idx_tb1 on tb1(id);
@@ -614,16 +618,17 @@ COMMIT
 ## PostgreSQL多版本并发控制
 
 ```SQL
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RC1 tuple-v1 IDLE IN TRANSACTION;
- RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RC1 tuple-v2 IDLE IN TRANSACTION;
- RR2 tuple-v2 IDLE IN TRANSACTION;
- RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
- RR1 tuple-v1 IDLE IN TRANSACTION;
- RR2 tuple-v2 IDLE IN TRANSACTION;
- RC1 tuple-v3 IDLE IN TRANSACTION;
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RC1 tuple-v1 IDLE IN TRANSACTION;
+ RC2 tuple-v1 UPDATE -> tuple-v2 COMMIT;
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RC1 tuple-v2 IDLE IN TRANSACTION;
+ RR2 tuple-v2 IDLE IN TRANSACTION;
+ RC3 tuple-v2 UPDATE -> tuple-v3 COMMIT;
+ RR1 tuple-v1 IDLE IN TRANSACTION;
+ RR2 tuple-v2 IDLE IN TRANSACTION;
+ RC1 tuple-v3 IDLE IN TRANSACTION;
 ```
 
 PostgreSQL多版本并发控制不需要UNDO表空间。
+
