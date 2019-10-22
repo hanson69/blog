@@ -4,11 +4,9 @@ date: 2019-10-21 23:57:43
 categories: DB基础
 tags:
 - VACUUM
-- 死元祖
+- 死元组
 - 高水位
-- 
-- 
-- 
+- 存储
 ---
 
 
@@ -81,7 +79,7 @@ postgres=# SELECT t_xmin, t_xmax, tuple_data_split('employee'::regclass, t_data,
 
 VACUUM还要执行其他任务。过去插入并成功提交的所有行都标记为**冻结**，这表明它们对于所有当前和将来的事务都是可见的。
 
-除非死元组超出高水位线，否则VACUUM通常不会将空间回收到文件系统。
+除非死元组超出高水位线，否则VACUUM通常不会将空间回收到文件系统。为什么要这样做？因为索引对应记录是通过记录物理位置来实现的，如果将表前面的物理块中的记录删除，并进行回收空间，这时有记录所在的物理块号会发生变化，会引起索引和记录的对应发生错误，需要对表进行重构（vacuum full）。而删除的是表后面的物理块号中的后面记录，在进行空间回收时，只需删除尾部的记录即可，不会引起索引和记录的对应发生错误，不需要对表进行重构。
 
 让我们考虑以下示例，以了解VACUUM何时可以将空间释放到文件系统。
 
@@ -179,7 +177,7 @@ WHERE relname = 'employee';
 
 请注意，使用VACUUM FULL，会锁住表并且重写整个关系。如果是一个小的表，这可能不成问题。但如果表很大，这种表锁会影响用户数分钟之久！VACUUM FULL会阻塞即格到来的写操作并且有些人会觉得数据库看上去已经宿掉了。
 
-第二个例子
+## 再看一个相似的问题
 
 ```SQL
 postgres=# CREATE TABLE t_test(id int) WITH (autovacuum_enabled=off); 
@@ -190,10 +188,10 @@ postgres=# INSERT INTO t_test SELECT * FROM generate_series(1,100000);
 首先检查该表的尺寸：
 
 ```SQL
-postgres=# SELECT pg_size_pretty(pg_relation_size("t_test"));
-pg_size pretty
----------------
-3544 kB
+postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
+ pg_size_pretty
+----------------
+ 3544 kB
 (1 row)
 ```
 
@@ -209,10 +207,10 @@ UPDATE 100000
 逻辑上，该表的尺寸将会在修改之后变得更大：
 
 ```SQL
-postgres=# SELECT pg_size_pretty(pg_relation_size('t test'));
-pg_size pretty
----------------
-7080kB 
+postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
+ pg_size_pretty
+----------------
+ 7080 kB
 (1 row)
 ```
 
@@ -224,31 +222,32 @@ postgres=# VACUUM t_test;
 
 如前所述，大部分情况下VACUUM不把空间还给文件系统。相反，它允许空间被重用。因此，该表根本不会收缩：
 
-```
+```SQL
 postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
-pg_size pretty
----------------
-7080 kB
-(1row)
+ pg_size_pretty
+----------------
+ 7080 kB
+(1 row)
 ```
 
 不过，下一次UPDATE不会让该表长大，因为它会用掉该表中的空闲空间。只有第二次的UPDATE会让该表再次长大，因为所有的空间都用完了，需要额外的存储空间：
 
 ```SQL
-postgres=# UPDATEt test SET id = id + 1;
+postgres=# UPDATE t_test SET id = id +1;
 UPDATE 100000
+
 postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
-pg_size pretty
----------------
-7080 kB
+ pg_size_pretty
+----------------
+ 7080 kB
 (1 row)
 
-postgres=#  UPDATE t_test SET id = id + 1; 
+postgres=# UPDATE t_test SET id = id +1;
 UPDATE 100000
-postgres=#  SELECT pg_size_pretty(pg_relation_size("t_test')); 
-pg_size_pretty
----------------
-10 MB
+postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
+ pg_size_pretty
+----------------
+ 10 MB
 (1 row)
 ```
 
@@ -262,32 +261,62 @@ postgres=# VACUUM t_test;
 尺寸还是没有改变。让我们看看表里有什么：
 
 ```SQL
-postgres=# SELECT ctid，*FROM t_test ORDER BY ctid DESC;
-   ctid    | id
---------- -+--------
- (1327,46) | 112
- (1327,45) | 111
- (1327,44) | 110
+postgres=# SELECT ctid, * FROM t_test ORDER BY ctid DESC;
+   ctid    |   id
+-----------+--------
+ (1327,46) |    112
+ (1327,45) |    111
  ...
- (884,20)  | 99798
- (884,19)  | 99797
+ (1327,25) |     91
+ (1327,24) |     90
+ (884,20)  |  99798
+ (884,19)  |  99797
+ ...
+ (884,12)  |  99790
+ (884,11)  |  99789
+ (442,85)  |     89
+ (442,84)  |     88
+ ...
+ (442,2)   |      6
+ (442,1)   |      5
+ (441,216) | 100004
+ (441,215) | 100003
 ... 
 ```
 
-ctid是行在磁盘上的物理位置。通过使用ORDER BY ctid DESC，用户将按照物理顺序从后向前读到该表(为什么有这么多小值和大值在该表的未尾？在该表最初被100000个行填充之后，最后一个块并没有被完全填满，因此第一次的UPDATE将用更改填满最后一块。这自然把该表的末尾揽乱了一点。)。如果将末尾数据删除会发生什么？
+ctid是行在磁盘上的物理位置。通过使用ORDER BY ctid DESC，用户将按照物理顺序从后向前读到该表(为什么有这么多小值和大值在该表的未尾？在该表最初被100000个行填充之后，最后一个块并没有被完全填满，因此第一次的UPDATE将用更改填满最后一块。这自然把该表的末尾揽乱了一点。)。
+
+这里的表记录在物理上存储的布局如下：
+
+序号| ctid | id
+---|---|---
+ 1| (0, 1) ~ (440, 226) | 123 ~ 99788
+ 2| (441, 1) ~ (441, 10) | 113 ~ 122
+ 3|(442, 1) ~ (442, 85) | 5 ~ 89
+ 4| (884, 11) ~ (884, 20) | 99789 ~ 99798
+ 5| (1327, 24) ~ (1327, 46) | 90 ~ 112
+
+
+
+
+如果将末尾数据删除会发生什么？
 
 ```SQL
-postgres=# DRLETE EROM t_test WHERE id >99000 oR id <1000;
+postgres=# DELETE FROM t_test WHERE id > 99000 OR id < 1000;
+DELETE 1999
 postgres=# VACUUM t_test;
-VACUUM 
-postgres=# SBLRcT B9 size pretty(eg_relation size('t test，));
-pg_size pretty
----------------
-3504 kB
+VACUUM
+postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
+ pg_size_pretty
+----------------
+ 3504 kB
 (1 row)
 ```
 
-尽管只有2%的数据被删除，该表的尺寸却下降了三分之二。
+尽管只有2%的数据被删除，该表的尺寸却下降了三分之二。因为 id > 99000 OR id < 1000 的记录很多都位于物理存储的后面（序号2 - 5），这时如果将它们删除，执行vacuum会将表中位于物理存储后面的死元组全部回收（序号2 - 5）。
 
+
+### 参考
+https://www.percona.com/blog/2018/08/06/basic-understanding-bloat-vacuum-postgresql-mvcc/
 
 
