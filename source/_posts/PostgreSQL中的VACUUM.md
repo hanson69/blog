@@ -1,7 +1,7 @@
 ---
 title: PostgreSQL中的VACUUM
 date: 2019-10-21 23:57:43
-categories: DB基础
+categories: PG基础
 tags:
 - VACUUM
 - 死元组
