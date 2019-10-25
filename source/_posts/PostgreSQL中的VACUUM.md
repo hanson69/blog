@@ -217,7 +217,16 @@ postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
 在UPDATE之后，人们可能会尝试把空间还给文件系统：
 
 ```SQL
-postgres=# VACUUM t_test;
+postgres=# VACUUM VERBOSE t_test;
+INFO:  vacuuming "public.t_test"
+INFO:  "t_test": removed 100000 row versions in 443 pages
+INFO:  "t_test": found 100000 removable, 100000 nonremovable row versions in 885 out of 885 pages
+DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 568
+There were 0 unused item pointers.
+Skipped 0 pages due to buffer pins, 0 frozen pages.
+0 pages are entirely empty.
+CPU: user: 0.08 s, system: 0.00 s, elapsed: 0.09 s.
+VACUUM
 ```
 
 如前所述，大部分情况下VACUUM不把空间还给文件系统。相反，它允许空间被重用。因此，该表根本不会收缩：
@@ -254,9 +263,32 @@ postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
 运行更多的查询：
 
 ```SQL
-postgres=# VACUUM t_test;
+postgres=# VACUUM VERBOSE t_test;
+INFO:  vacuuming "public.t_test"
+INFO:  "t_test": removed 100000 row versions in 885 pages
+INFO:  "t_test": found 100000 removable, 100000 nonremovable row versions in 1328 out of 1328 pages
+DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 570
+There were 118 unused item pointers.
+Skipped 0 pages due to buffer pins, 0 frozen pages.
+0 pages are entirely empty.
+CPU: user: 0.08 s, system: 0.00 s, elapsed: 0.08 s.
+VACUUM
+
+
 postgres=# UPDATE t_test SET id = id + 1;
-postgres=# VACUUM t_test;
+UPDATE 100000
+
+postgres=# VACUUM VERBOSE t_test;
+INFO:  vacuuming "public.t_test"
+INFO:  "t_test": removed 100000 row versions in 442 pages
+INFO:  "t_test": found 100000 removable, 100000 nonremovable row versions in 887 out of 1328 pages
+DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 571
+There were 357 unused item pointers.
+Skipped 0 pages due to buffer pins, 441 frozen pages.
+0 pages are entirely empty.
+CPU: user: 0.07 s, system: 0.00 s, elapsed: 0.07 s.
+VACUUM
+
 ```
 尺寸还是没有改变。让我们看看表里有什么：
 
@@ -292,9 +324,10 @@ ctid是行在磁盘上的物理位置。通过使用ORDER BY ctid DESC，用户�
 ---|---|---
  1| (0, 1) ~ (440, 226) | 123 ~ 99788
  2| (441, 1) ~ (441, 10) | 113 ~ 122
- 3|(442, 1) ~ (442, 85) | 5 ~ 89
- 4| (884, 11) ~ (884, 20) | 99789 ~ 99798
- 5| (1327, 24) ~ (1327, 46) | 90 ~ 112
+ 3| (441,11) ~ (441,216) | 99799 ~ 100000
+ 4|(442, 1) ~ (442, 85) | 5 ~ 89
+5| (884, 11) ~ (884, 20) | 99789 ~ 99798
+6| (1327, 24) ~ (1327, 46) | 90 ~ 112
 
 
 
@@ -304,8 +337,22 @@ ctid是行在磁盘上的物理位置。通过使用ORDER BY ctid DESC，用户�
 ```SQL
 postgres=# DELETE FROM t_test WHERE id > 99000 OR id < 1000;
 DELETE 1999
-postgres=# VACUUM t_test;
+
+postgres=# VACUUM VERBOSE t_test;
+INFO:  vacuuming "public.t_test"
+INFO:  "t_test": removed 1999 row versions in 12 pages
+INFO:  "t_test": found 1999 removable, 143 nonremovable row versions in 12 out of 1328 pages
+DETAIL:  0 dead row versions cannot be removed yet, oldest xmin: 572
+There were 465 unused item pointers.
+Skipped 0 pages due to buffer pins, 883 frozen pages.
+0 pages are entirely empty.
+CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.00 s.
+INFO:  "t_test": truncated 1328 to 438 pages
+DETAIL:  CPU: user: 0.00 s, system: 0.00 s, elapsed: 0.01 s
 VACUUM
+
+-- 显示 "t_test": truncated 1328 to 438 pages
+
 postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
  pg_size_pretty
 ----------------
@@ -313,7 +360,7 @@ postgres=# SELECT pg_size_pretty(pg_relation_size('t_test'));
 (1 row)
 ```
 
-尽管只有2%的数据被删除，该表的尺寸却下降了三分之二。因为 id > 99000 OR id < 1000 的记录很多都位于物理存储的后面（序号2 - 5），这时如果将它们删除，执行vacuum会将表中位于物理存储后面的死元组全部回收（序号2 - 5）。
+尽管只有2%的数据被删除，该表的尺寸却下降了三分之二。因为 id > 99000 OR id < 1000 的记录很多都位于物理存储的后面（序号2 - 6），这时如果将它们删除，执行vacuum会将表中位于物理存储后面的死元组全部回收（序号2 - 6）。
 
 
 ### 参考

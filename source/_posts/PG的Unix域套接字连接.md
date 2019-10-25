@@ -1,9 +1,9 @@
 ---
-title: PG的Unix域套接字连接
+title: PG的Unix domain socket连接
 date: 2019-10-23 23:45:50
 categories: PG基础
 tags: 
-- unix socket
+- Unix domain socket
 ---
 
 
@@ -49,7 +49,14 @@ Unix 域套接字的访问权限通过unix_socket_permissions (integer)
 人可以访问）和0700（只有用户自己可以访问）（对
 于 Unix 域套接字，只有写权限有麻烦，因此没有对读取和执行权限的设置和收回）。
 
-当unix_socket_permissions = 0770时，切换到其他用户：
+当unix_socket_permissions = 0770时，
+```
+[hanson@postgres ~]$ ls /tmp -al
+total 32
+srwxrwx---.  1 hanson hanson    0 Sep  9 13:35 .s.PGSQL.5432
+-rw-------.  1 hanson hanson   47 Sep  9 13:35 .s.PGSQL.5432.lock
+```
+切换到其他用户连接数据库，没有权限：
 
 ```SQL
 -bash-4.1$ psql postgres hanson /tmp/
@@ -60,7 +67,15 @@ psql: could not connect to server: Permission denied
 
 ```
 
-当unix_socket_permissions = 0777时，切换到其他用户：
+当unix_socket_permissions = 0777时，
+```
+[hanson@postgres ~]$ ls /tmp -al
+total 32
+srwxrwxrwx.  1 hanson hanson    0 Sep  9 13:37 .s.PGSQL.5432
+-rw-------.  1 hanson hanson   47 Sep  9 13:37 .s.PGSQL.5432.lock
+```
+
+切换到其他用户连接数据库，成功：
 
 
 ```SQL
