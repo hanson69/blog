@@ -56,7 +56,8 @@ total 32
 srwxrwx---.  1 hanson hanson    0 Sep  9 13:35 .s.PGSQL.5432
 -rw-------.  1 hanson hanson   47 Sep  9 13:35 .s.PGSQL.5432.lock
 ```
-切换到其他用户连接数据库，没有权限：
+切换到当前操作系统的其他用户连接数据库，其他用户需要安装了psql客户端。
+这时会显示没有权限：
 
 ```SQL
 -bash-4.1$ psql postgres hanson /tmp/
@@ -75,7 +76,7 @@ srwxrwxrwx.  1 hanson hanson    0 Sep  9 13:37 .s.PGSQL.5432
 -rw-------.  1 hanson hanson   47 Sep  9 13:37 .s.PGSQL.5432.lock
 ```
 
-切换到其他用户连接数据库，成功：
+切换到其他用户连接数据库，连接成功：
 
 
 ```SQL
