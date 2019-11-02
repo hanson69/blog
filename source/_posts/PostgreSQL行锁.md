@@ -114,3 +114,10 @@ postgres=# select * from pgrowlocks('tb1');
 2. pgrowlocks不提供一致性数据, 例如tuple a locked, 但是在查看到lock b的时候, tuple a 可能已经unlocked了， 也就是说在查询过程中行锁随时都可以发生变化。
 
 
+## 参考：
+
+[https://www.postgresql.org/docs/12/explicit-locking.html#LOCKING-ROWS](https://www.postgresql.org/docs/12/explicit-locking.html#LOCKING-ROWS)
+
+[https://github.com/digoal/blog/blob/0ef02248fe7419c55a98a425feefd2421ad25537/201306/20130624_01.md](https://github.com/digoal/blog/blob/0ef02248fe7419c55a98a425feefd2421ad25537/201306/20130624_01.md)
+
+《PostgreSQL修炼之道从小工到专家》
