@@ -75,12 +75,12 @@ postgres=# select * from pgrowlocks('tb1');
 #### **注意：**
 > 1、在PostgreSQL中，由于有多版本的实现，所以实际读取行数据时，并不会在行上执行任何锁。
 > 
-> 2、PostgreSQL不会将已获得的行锁信息存储在内存中, 行锁信息存储在行的头部信息infomask中，换句话锁, 获得行锁时需要修改t_infomask。
+> 2、PostgreSQL不会将已获得的行锁信息存储在内存中, 行锁信息存储在行的头部信息infomask中，换句话说, 获得行锁时需要修改t_infomask。
 
 
 
 ## 行锁冲突矩阵
-|                   | FOR KEY SHARE | FOR SHARE | FOR NO KEY UPDATE | FOR UPDATE |
+|  Requested Lock Mode  | FOR KEY SHARE | FOR SHARE | FOR NO KEY UPDATE | FOR UPDATE |
 |-------------------|---------------|-----------|-------------------|------------|
 | FOR KEY SHARE     |               |           |                   | X          |
 | FOR SHARE         |               |           | X                 | X          |
