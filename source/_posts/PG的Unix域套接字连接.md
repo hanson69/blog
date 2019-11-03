@@ -34,20 +34,16 @@ srwxrwxrwx.  1 hanson hanson    0 Sep  9 13:34 .s.PGSQL.5432
 -rw-------.  1 hanson hanson   47 Sep  9 13:34 .s.PGSQL.5432.lock
 ```
 
-Unix 域套接字目录通过unix_socket_directories (string)
-指定。通过列出用逗号分隔
-的多个目录可以建立多个套接字。如果是空值，表示在任何 Unix 域套接字上都不监听，在
-这种情况中只能使用 TCP/IP 套接字来连接到服务器。默认值通常是/tmp，但是在编译时
-可以被改变。
-数据库在启动的时候会在unix_socket_directories目录中创建一个套接字文件（名为.s.PGSQL.nnnn，其中nnnn是服务器的端口号），和一个名
-为.s.PGSQL.nnnn.lock的普通文件，任何
-一个都不应该被手工移除。在数据库停止的时候，这两个文件就会被删除。
+**Unix 域套接字目录通过unix_socket_directories (string)指定。**
 
-Unix 域套接字的访问权限通过unix_socket_permissions (integer)
-设置 。Unix 域套接字使用普通的 Unix 文件系统权限集。
-默认的权限是0777，意思是任何人都可以连接。合理的候选是0770（只有用户和同组的
-人可以访问）和0700（只有用户自己可以访问）（对
-于 Unix 域套接字，只有写权限有麻烦，因此没有对读取和执行权限的设置和收回）。
+通过列出用逗号分隔
+的多个目录可以建立多个套接字。如果是空值，表示在任何 Unix域套接字上都不监听，在这种情况中只能使用 TCP/IP套接字来连接到服务器。默认值通常是/tmp，但是在编译时可以被改变。
+
+数据库在启动的时候会在unix_socket_directories目录中创建一个套接字文件（名为.s.PGSQL.nnnn，其中nnnn是服务器的端口号），和一个名为.s.PGSQL.nnnn.lock的普通文件，任何一个都不应该被手工移除。在数据库停止的时候，这两个文件就会被删除。
+
+**Unix 域套接字的访问权限通过unix_socket_permissions (integer)设置 。**
+
+Unix 域套接字使用普通的 Unix 文件系统权限集。默认的权限是0777，意思是任何人都可以连接。合理的候选是0770（只有用户和同组的人可以访问）和0700（只有用户自己可以访问）（对于 Unix 域套接字，只有写权限有麻烦，因此没有对读取和执行权限的设置和收回）。
 
 当unix_socket_permissions = 0770时，
 ```
