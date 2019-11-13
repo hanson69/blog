@@ -1,14 +1,13 @@
 ---
 title: PostgreSQL的VACUUM概述
-date: 2019-11-03 21:08:59
+date: 2019-11-03, 21:08:59
 categories: PG基础
 tags:
-- VACUUM
-- 死元组
-- FSM
+- VACUUM 
+- 死元组 
+- FSM 
 - VM
 ---
-
 PostgreSQL的VACUUM主要有两个任务： 删除死元组和冻结旧元组的事务ID。
 
 **死元组**：表中已删除的tuple，但仍占用空间的记录称为Dead tuple，这些死元组占据的空间可以称为Bloat。一旦已经运行的事务不再依赖于那些死元组，则不再需要死元组，而VACUUM就负责回收这些死元组占用的存储。
@@ -33,7 +32,7 @@ VACUUM分为2种：
 > 
 > （5）对表的每一页执行以下任务，即步骤（6）和（7）。
 > 
-> （6）删除死元组，如果死元组位于高水位的，VACUUM还会对页面的活元组进行重组。
+> （6）删除死元组。
 > 
 > （7）更新目标表的相应FSM和VM。
 > 
@@ -50,7 +49,7 @@ VACUUM分为2种：
 运行标准的VACUUM是无阻塞操作。它不会在表上加排他锁，这意味着VACUUM可以与SELECT语句和DML语句（如INSERT、UPDATE、DELETE命令）并行执行，但是若在清理该表，不能使用如ALTERTABLE这样的DDL语句来修改表定义。
 
 #### VACUUM FULL
-VACUUM FULL需要有在表上的一个排斥锁才能工作，不能与其他使用该表的语句并行执行，但是VACUUM FULL可以回收更多的磁盘空间，当然它的运行速度也要慢得多。
+VACUUM FULL不能与其他使用该表的语句并行执行，但是VACUUM FULL可以回收更多的磁盘空间，当然它的运行速度也要慢得多。
 
 VACUUM FULL执行过程如下：
 ```
@@ -60,12 +59,12 @@ VACUUM FULL执行过程如下：
 (4)       FOR each live tuple in the old table
 (5)            Copy the live tuple to the new table file
 (6)            Freeze the tuple IF necessary
-            END FOR
-(7)        Remove the old table file
-(8)        Rebuild all indexes
-(9)        Update FSM and VM
+          END FOR
+(7)       Remove the old table file
+(8)       Rebuild all indexes
+(9)       Update FSM and VM
 (10)      Update statistics
-            Release AccessExclusiveLock lock
+          Release AccessExclusiveLock lock
        END FOR
 (11)  Remove unnecessary clog files and pages if possible
 ```
