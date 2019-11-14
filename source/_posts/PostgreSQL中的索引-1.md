@@ -8,7 +8,9 @@ tags:
 - 位图扫描
 - 顺序扫描
 - 覆盖索引
+- 表达式索引
 ---
+
 
 在本文中，我们将讨论与DBMS核心相关的常规索引引擎和各个索引访问方法之间的职责分配。
 
@@ -223,6 +225,118 @@ NULL表示不存在或未知值，在关系数据库中起着重要的作用。
 从索引支持的角度来看，我们是否需要对这些值进行索引还不清楚。如果没有索引NULL，则索引可能更紧凑。但是，如果索引了NULL，我们可以将索引用于“ indexed-field IS [NOT] NULL”之类的条件，并且当在没有为表指定任何条件时也可作为覆盖索引（因为在这种情况下，索引必须返回所有表行的数据，包括NULL的表行）。
 
 对于每个访问方法，开发人员都会单独决定是否索引NULL。但一般来说，它们会被索引。
+
+## 几个领域的索引
+
+为了支持多个字段的条件，可以使用多列索引。例如，我们可以在表的两个字段上建立索引：
+
+postgres=# create index on t(a,b);
+
+postgres=# analyze t;
+
+优化器很可能更喜欢此索引而不是连接位图，因为在这里，我们无需任何辅助操作即可轻松获得所需的TID：
+
+
+```SQL
+postgres=# explain (costs off) select * from t where a <= 100 and b = 'a';
+                   QUERY PLAN                  
+------------------------------------------------
+ Index Scan using t_a_b_idx on t
+   Index Cond: ((a <= 100) AND (b = 'a'::text))
+(2 rows)
+```
+
+
+从第一个字段开始，通过某些字段的条件，也可以使用多列索引来加快数据检索：
+
+
+```SQL
+postgres=# explain (costs off) select * from t where a <= 100;
+              QUERY PLAN              
+--------------------------------------
+ Bitmap Heap Scan on t
+   Recheck Cond: (a <= 100)
+   ->  Bitmap Index Scan on t_a_b_idx
+         Index Cond: (a <= 100)
+(4 rows)
+```
+
+
+通常，如果不对第一个字段施加条件，则不会使用索引。但是有时优化器可能认为索引的使用比顺序扫描更有效。当考虑“ btree”索引时，我们将扩展这个主题。
+
+并非所有访问方法都支持在几列上建立索引。
+
+### 表达式索引
+
+我们已经提到搜索条件必须看起来像“indexed-field operator expression ”。在下面的示例中，将不使用索引，因为使用的是包含字段名称的表达式而不是字段名称本身：
+
+
+```SQL
+postgres=# explain (costs off) select * from t where lower(b) = 'a';
+                QUERY PLAN                
+------------------------------------------
+ Seq Scan on t
+   Filter: (lower((b)::text) = 'a'::text)
+(2 rows)
+```
+
+
+重写此特定查询不需要太多时间，只需将字段名写入运算符的左侧。但是，如果这不可能，则表达式的索引（函数索引）将有所帮助：
+
+
+```SQL
+postgres=# create index on t(lower(b));
+
+postgres=# analyze t;
+
+postgres=# explain (costs off) select * from t where lower(b) = 'a';
+                     QUERY PLAN                    
+----------------------------------------------------
+ Bitmap Heap Scan on t
+   Recheck Cond: (lower((b)::text) = 'a'::text)
+   ->  Bitmap Index Scan on t_lower_idx
+         Index Cond: (lower((b)::text) = 'a'::text)
+(4 rows)
+```
+
+
+
+函数索引不是建立在表字段上，而是建立在任意表达式上。优化器将为“indexed-expression operator expression”等条件考虑此索引。如果要索引的表达式的计算是一个代价高昂的操作，那么索引的更新也将需要相当多的计算资源。
+请记住，索引表达式会收集一个单独的统计数据。我们可以通过索引名在«pg_stats»视图中了解此统计信息：
+
+
+```SQL
+postgres=# \d t
+       Table "public.t"
+ Column |  Type   | Modifiers
+--------+---------+-----------
+ a      | integer |
+ b      | text    |
+ c      | boolean |
+Indexes:
+    "t_a_b_idx" btree (a, b)
+    "t_a_idx" btree (a)
+    "t_b_idx" btree (b)
+    "t_lower_idx" btree (lower(b))
+postgres=# select * from pg_stats where tablename = 't_lower_idx';
+```
+
+
+如有必要，可以用与常规数据字段相同的方式控制直方图的数量（请注意，列名可能因索引表达式而异）：
+
+
+```SQL
+postgres=# \d t_lower_idx
+ Index "public.t_lower_idx"
+ Column | Type | Definition
+--------+------+------------
+ lower  | text | lower(b)
+btree, for table "public.t"
+postgres=# alter index t_lower_idx alter column "lower" set statistics 69;
+```
+
+
+> PostgreSQL 11引入了一种更简洁的方法，通过在ALTER INDEX…SET statistics命令中指定列号来控制索引的统计目标。
 
 
 待续……
