@@ -1,5 +1,5 @@
 ---
-title: PostgreSQL中的索引-1（翻译）
+title: 【翻译】PostgreSQL中的索引-1
 date: 2019-11-13 23:17:47
 categories: PG基础
 tags:
@@ -9,7 +9,11 @@ tags:
 - 顺序扫描
 - 覆盖索引
 - 表达式索引
+- 部分索引
+- 排序
+- INDEX CONCURRENTLY
 ---
+
 
 
 在本文中，我们将讨论与DBMS核心相关的常规索引引擎和各个索引访问方法之间的职责分配。
@@ -53,6 +57,24 @@ tags:
 
 ## 主要扫描技术
 
+**译者注：**
+
+> **访问方法（access method）**
+> 
+> PostgreSQL中实际用于从磁盘对象中检索数据的访问方法是堆文件的顺序扫描、索引扫描和位图索引扫描。
+> 
+> **顺序扫描（sequential scan**）。关系中的元组是从文件的第一块到最后一块顺序扫描。事务隔离性规则是“可见的”元组才会返回给调用者。
+> 
+> **索引扫描（index scan）**。给定一个搜索条件，如一个范围或等式谓词，这种访问方法会从相关的堆文件中返回匹配的元组集。该算子一次处理一个元组，开始是从索引中读取一个项，然后从堆文件中取相应的元组。在最坏情况下，这可能导致对于每个元组都要随机地取一次页面。
+> 
+> **位图索引扫描（bitmap index scan）**。位图索引扫描减少了在索引扫描中过多的随机取页面的风险。这通过在两个阶段中处理元组来实现。第一个阶段读取所有的索引项并在一个位图中存储堆元组的TID，第二个阶段按位图顺序去表中取匹配上的堆元组。这保证了每个堆页面只访问一次，并增加了顺序取页面的机会。另外，由多个索引建立的位图可以进行合并或求交，以便在访问堆之前计算复杂的布尔谓词。
+
+ **注意**：
+> 
+> 位图扫描与位图索引不同，这两个完全不同，没有共同点。
+> 
+> 位图索引是一种索引类型，而位图扫描是一种扫描方法。
+
 ### 索引扫描
 
 我们可以使用索引提供的TID进行不同的处理。让我们考虑一个例子：
@@ -64,7 +86,7 @@ postgres=# create table t(a integer, b text, c boolean);
 postgres=# insert into t(a,b,c)
   select s.id, chr((32+random()*94)::integer), random() < 0.01
   from generate_series(1,100000) as s(id)
-  order by random();
+  order by 2;
 
 postgres=# create index on t(a);
 
@@ -72,7 +94,7 @@ postgres=# analyze t;
 ```
 
 
-我们创建了一个三字段表。第一个字段包含从1到100.000的数字，并且在此字段上创建索引（无论什么类型）。第二个字段包含各种ASCII字符，但不可打印的字符除外。最后，第三个字段包含一个逻辑值，该逻辑值对于大约1％的行为true，对于其余行为false。行以随机顺序插入表中。
+我们创建了一个三字段表。第一个字段包含从1到100000的数字，并且在此字段上创建索引（无论什么类型）。第二个字段包含各种ASCII字符，但不可打印的字符除外。最后，第三个字段包含一个逻辑值，该逻辑值对于大约1％的行为true，对于其余行为false。行以随机顺序插入表中。
 
 让我们尝试根据条件“ a = 1”选择一个值。请注意，条件看起来像“ indexed-field operator expression ”，其中operator为“等于”，expression（搜索关键字）为“ 1”。在大多数情况下，条件必须看起来像这样才能使用索引。
 
@@ -150,6 +172,9 @@ postgres=# select attname, correlation from pg_stats where tablename = 't';
 
 接近1的绝对值表示相关性高（如“ c”列一样），相反，接近0的绝对值表示混杂分布（“ a”列）。
 
+**了解更多**：
+[PostgreSQL bitmapAnd, bitmapOr, bitmap index scan, bitmap heap scan](https://github.com/digoal/blog/blob/master/201702/20170221_02.md)
+
 ### 顺序扫描
 
 在非选择条件下，优化器将更倾向于使用对整个表的顺序扫描而不是使用索引：
@@ -169,7 +194,7 @@ postgres=# explain (costs off) select * from t where a <= 40000;
 
 顺序扫描的速度快于随机扫描的速度。这尤其适用于硬盘，在硬盘中，将磁头带到磁道上的机械操作比读取数据本身要花费更多的时间。对于SSD，这种影响不太明显。可以使用两个参数来考虑访问成本的差异：“ seq_page_cost”和“ random_page_cost”，我们不仅可以全局设置，而且可以在表空间级别设置这种方式，以适应不同磁盘子系统的特性。
 
-### 覆盖索引
+## 覆盖索引
 
 通常，访问方法的主要任务是返回匹配表行的标识符，以供索引引擎从这些行中读取必需的数据。但是，如果索引已经包含查询所需的所有数据呢？这样的索引称为Covering，在这种情况下，优化器可以应用 index-only scan：
 
@@ -216,7 +241,7 @@ postgres=# explain (analyze, costs off) select a from t where a < 100;
 
 > PostgreSQL 11引入了一个新功能：INCLUDE-indexes。如果有一个唯一索引缺少一些列作为某个查询的覆盖索引该怎么办？不能简单地将列添加到索引，因为它将破坏其唯一性。不能简单地将列添加到索引中，因为它将破坏其唯一性。该特性允许包含不影响唯一性且不能用于搜索谓词的非键列，但仍然可以提供仅索引扫描。
 
-### NULL
+## NULL
 
 NULL表示不存在或未知值，在关系数据库中起着重要的作用。
 
@@ -226,7 +251,7 @@ NULL表示不存在或未知值，在关系数据库中起着重要的作用。
 
 对于每个访问方法，开发人员都会单独决定是否索引NULL。但一般来说，它们会被索引。
 
-## 几个领域的索引
+## 多个字段的索引
 
 为了支持多个字段的条件，可以使用多列索引。例如，我们可以在表的两个字段上建立索引：
 
@@ -266,7 +291,7 @@ postgres=# explain (costs off) select * from t where a <= 100;
 
 并非所有访问方法都支持在几列上建立索引。
 
-### 表达式索引
+## 表达式索引
 
 我们已经提到搜索条件必须看起来像“indexed-field operator expression ”。在下面的示例中，将不使用索引，因为使用的是包含字段名称的表达式而不是字段名称本身：
 
@@ -338,8 +363,145 @@ postgres=# alter index t_lower_idx alter column "lower" set statistics 69;
 
 > PostgreSQL 11引入了一种更简洁的方法，通过在ALTER INDEX…SET statistics命令中指定列号来控制索引的统计目标。
 
+## 部分索引
 
-待续……
+有时需要只需索引部分表行，这通常与极度不均匀的分布有关：通过索引搜索不频繁的值很有意义，但是通过对表进行全面扫描可以更容易地找到频繁的值。
+
+我们当然可以在«c»列上建立一个常规索引，该索引将按照我们期望的方式工作：
+
+
+```SQL
+postgres=# create index on t(c);
+
+postgres=# analyze t;
+
+postgres=# explain (costs off) select * from t where c;
+          QUERY PLAN          
+-------------------------------
+ Index Scan using t_c_idx on t
+   Index Cond: (c = true)
+   Filter: c
+(3 rows)
+
+postgres=# explain (costs off) select * from t where not c;
+    QUERY PLAN    
+-------------------
+ Seq Scan on t
+   Filter: (NOT c)
+(2 rows)
+```
+
+
+索引大小为276页：
+
+
+```SQL
+postgres=# select relpages from pg_class where relname='t_c_idx';
+ relpages
+----------
+      276
+(1 row)
+```
+
+
+但是由于«c»列仅对1％的行具有true值，因此实际上从未使用过99％的索引。在这种情况下，我们可以建立部分索引：
+
+
+```SQL
+postgres=# create index on t(c) where c;
+
+postgres=# analyze t;
+
+索引的大小减少到5页：
+
+postgres=# select relpages from pg_class where relname='t_c_idx1';
+ relpages
+----------
+        5
+(1 row)
+```
+
+
+有时，大小和性能上的差异可能非常明显。
+
+## 排序
+
+如果访问方法以某些特定顺序返回行标识符，这将为优化器提供执行查询的其他选项。
+
+我们可以扫描表，然后对数据进行排序：
+
+
+```SQL
+postgres=# set enable_indexscan=off;
+
+postgres=# explain (costs off) select * from t order by a;
+     QUERY PLAN      
+---------------------
+ Sort
+   Sort Key: a
+   ->  Seq Scan on t
+(3 rows)
+```
+
+
+但是我们可以按照期望的顺序使用索引轻松读取数据：
+
+
+```SQL
+postgres=# set enable_indexscan=on;
+
+postgres=# explain (costs off) select * from t order by a;
+          QUERY PLAN          
+-------------------------------
+ Index Scan using t_a_idx on t
+(1 row)
+```
+
+
+所有访问方法中只有«btree»可以返回排序的数据，因此让我们开始更详细的讨论，直到考虑这种类型的索引。
+
+## CREATE INDEX CONCURRENTLY
+
+通常，建立索引需要为表获取SHARE锁。该锁允许从表中读取数据，但禁止在建立索引时进行任何更改。
+
+我们可以确定这一点，例如，如果在«t»表上建立索引期间，我们在另一个会话中执行以下查询：
+
+
+```SQL
+postgres=# select mode, granted from pg_locks where relation = 't'::regclass;
+   mode    | granted
+-----------+---------
+ ShareLock | t
+(1 row)
+```
+
+
+如果表足够大并且广泛用于插入，更新或删除，则这似乎是不可接受的，因为修改过程将长时间等待锁定释放。
+
+在这种情况下，我们可以使用并发建立索引。
+
+
+```SQL
+postgres=# create index concurrently on t(a);
+```
+
+
+此命令将表锁定为SHARE UPDATE EXCLUSIVE模式，该模式允许读取和更新（禁止更改表结构，禁止concurrent vacuuming, analysis, 或在该表上构建另一个索引）。
+
+但是，也有另一面。首先，索引的建立将比平时慢，因为完成了两次遍历表而不是一次遍历，并且还必须等待修改数据的并行事务完成。
+
+其次，在同时建立索引的情况下，可能会发生死锁或违反唯一约束。但是这样还会建立索引，尽管该索引无法运行。我们必须要删除并重建这样的索引。无效的索引可通过 \d 元命令查看到，输出中用INVALID单词进行标记，下面的查询可以返回所有的无效索引：
+
+
+```SQL
+postgres=# select indexrelid::regclass index_name, indrelid::regclass table_name
+from pg_index where not indisvalid;
+ index_name | table_name
+------------+------------
+ t_a_idx    | t
+(1 row)
+```
+
 
 # 英文原文：
 https://habr.com/en/company/postgrespro/blog/441962/
