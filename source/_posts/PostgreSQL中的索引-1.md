@@ -16,6 +16,7 @@ tags:
 
 
 
+
 在本文中，我们将讨论与DBMS核心相关的常规索引引擎和各个索引访问方法之间的职责分配。
 
 
@@ -135,7 +136,7 @@ postgres=# explain (costs off) select * from t where a <= 100;
 如果对多个表字段施加条件，并且对这些字段进行了索引，则位图扫描可以同时使用多个索引（如果优化器认为这是有效的）。对于每个索引，将生成行版本的位图，然后对其执行逐位布尔乘法（如果表达式由AND连接）或布尔加法（如果表达式由or连接）。例如：
 
 
-```
+```SQL
 postgres=# create index on t(b);
 
 postgres=# analyze t;
@@ -219,7 +220,7 @@ postgres=# explain (costs off) select a from t where a < 100;
 
 因此，定期vacuum可提高覆盖指数的效率。此外，优化器考虑了死元组的数量，并且如果它预测可见性检查的开销成本很高，则可以决定不使用index-only scan。
 
-我们可以使用EXPLAIN ANALYZE命令了解对表的强制访问次数：
+我们可以使用EXPLAIN ANALYZE命令了解表被强制访问的次数：
 
 
 ```SQL
@@ -239,7 +240,8 @@ postgres=# explain (analyze, costs off) select a from t where a < 100;
 
 并非所有索引都将索引值与行标识符一起存储。如果访问方法无法返回数据，则不能将其用于 index-only scans。
 
-> PostgreSQL 11引入了一个新功能：INCLUDE-indexes。如果有一个唯一索引缺少一些列作为某个查询的覆盖索引该怎么办？不能简单地将列添加到索引，因为它将破坏其唯一性。不能简单地将列添加到索引中，因为它将破坏其唯一性。该特性允许包含不影响唯一性且不能用于搜索谓词的非键列，但仍然可以提供仅索引扫描。
+> PostgreSQL 11引入了一个新功能：INCLUDE-indexes。如果有一个唯一索引缺少一些列作为某个查询的覆盖索引该怎么办？不能简单地将列添加到索引，因为它将破坏其唯一性。该特性允许包含不影响唯一性且不能用于搜索谓词的非键列，但仍然可以提供仅索引扫描。
+了解更多：https://github.com/digoal/blog/blob/master/201905/20190503_03.md
 
 ## NULL
 
@@ -291,6 +293,8 @@ postgres=# explain (costs off) select * from t where a <= 100;
 
 并非所有访问方法都支持在几列上建立索引。
 
+**更多示例说明**：http://www.postgresqltutorial.com/postgresql-indexes/postgresql-multicolumn-indexes/
+
 ## 表达式索引
 
 我们已经提到搜索条件必须看起来像“indexed-field operator expression ”。在下面的示例中，将不使用索引，因为使用的是包含字段名称的表达式而不是字段名称本身：
@@ -306,7 +310,7 @@ postgres=# explain (costs off) select * from t where lower(b) = 'a';
 ```
 
 
-重写此特定查询不需要太多时间，只需将字段名写入运算符的左侧。但是，如果这不可能，则表达式的索引（函数索引）将有所帮助：
+表达式的索引（函数索引）：
 
 
 ```SQL
@@ -326,7 +330,10 @@ postgres=# explain (costs off) select * from t where lower(b) = 'a';
 
 
 
-函数索引不是建立在表字段上，而是建立在任意表达式上。优化器将为“indexed-expression operator expression”等条件考虑此索引。如果要索引的表达式的计算是一个代价高昂的操作，那么索引的更新也将需要相当多的计算资源。
+函数索引不是建立在表字段上，而是建立在任意表达式上。优化器将为“indexed-expression operator expression”等条件考虑此索引。注意，表达式中的索引维护成本很高，因为PostgreSQL必须在插入或更新时对每一行的表达式求值，并使用结果进行索引。因此，当检索速度比插入和更新速度更重要时，应该对表达式使用索引。
+
+**更多示例说明**：http://www.postgresqltutorial.com/postgresql-indexes/postgresql-index-on-expression/
+
 请记住，索引表达式会收集一个单独的统计数据。我们可以通过索引名在«pg_stats»视图中了解此统计信息：
 
 
@@ -347,7 +354,7 @@ postgres=# select * from pg_stats where tablename = 't_lower_idx';
 ```
 
 
-如有必要，可以用与常规数据字段相同的方式控制直方图的数量（请注意，列名可能因索引表达式而异）：
+如有必要，可以《t_lower_idx》 的内容（请注意，列名可能因索引表达式而异）：
 
 
 ```SQL
@@ -423,6 +430,8 @@ postgres=# select relpages from pg_class where relname='t_c_idx1';
 
 
 有时，大小和性能上的差异可能非常明显。
+
+**更多示例说明**：http://www.postgresqltutorial.com/postgresql-indexes/postgresql-partial-index/
 
 ## 排序
 
@@ -501,7 +510,6 @@ from pg_index where not indisvalid;
  t_a_idx    | t
 (1 row)
 ```
-
 
 # 英文原文：
 https://habr.com/en/company/postgrespro/blog/441962/
