@@ -129,3 +129,90 @@ from unnest(array[
 支持使用表达式 «indexed-field IN (list_of_constants)» 搜索多个值，这与 «indexed-field = ANY(array_of_constants)»相同。
 - search_nulls。
 通过 IS NULL 和 IS NOT NULL 条件进行搜索的可能性。
+
+我们已经详细讨论了一些属性。一些属性特定于某些访问方法。在考虑这些特定方法时，我们将讨论这些属性。
+
+# 操作符类和族
+
+除了接口公开的访问方法的属性之外，还需要了解访问方法接受哪些数据类型和哪些操作符。为此，PostgreSQL引入了操作符类和操作符族的概念。
+
+操作符类包含用于索引的最小运算符集（可能还有辅助函数），以操作某种数据类型。
+
+操作符类包含在某些操作符族中。此外，如果一个公共操作符族具有相同的语义，则它们可以包含多个操作符类。例如，«integer_ops»系列包括«int8_ops»、«int4_ops»和«int2_ops»类，这些类的类型有«bigint»、«integer»和«smallint»，它们的大小不同，但含义相同。
+
+
+```SQL
+postgres=# select opfname, opcname, opcintype::regtype
+            from pg_opclass opc, pg_opfamily opf
+            where opf.opfname = 'integer_ops'
+            and opc.opcfamily = opf.oid
+            and opf.opfmethod = (
+                  select oid from pg_am where amname = 'btree'
+                );
+   opfname   | opcname  | opcintype
+-------------+----------+-----------
+ integer_ops | int2_ops | smallint
+ integer_ops | int4_ops | integer
+ integer_ops | int8_ops | bigint
+(3 rows)
+```
+
+
+另一个示例：«datetime_ops»系列包括操作日期的操作符类（有时间和无时间）：
+
+
+```SQL
+postgres=# select opfname, opcname, opcintype::regtype
+from pg_opclass opc, pg_opfamily opf
+where opf.opfname = 'datetime_ops'
+and opc.opcfamily = opf.oid
+and opf.opfmethod = (
+      select oid from pg_am where amname = 'btree'
+    );
+   opfname    |     opcname     |          opcintype          
+--------------+-----------------+-----------------------------
+ datetime_ops | date_ops        | date
+ datetime_ops | timestamptz_ops | timestamp with time zone
+ datetime_ops | timestamp_ops   | timestamp without time zone
+(3 rows)
+```
+
+操作符族还可以包含其他操作符来比较不同类型的值。按族分组使计划器可以对具有不同类型值的谓词使用索引。一个族还可以包含其他辅助函数。
+
+
+在大多数情况下，我们不需要知道任何关于操作符族和类的信息。通常我们只是创建一个索引，默认情况下使用某个操作符类。
+
+但是，我们可以显式地指定operator类。这是一个需要显式规范的简单示例：在 collation 不是 C 的数据库中，常规索引不支持LIKE操作：
+
+
+```SQL
+postgres=# show lc_collate;
+ lc_collate 
+-------------
+ en_US.UTF-8
+(1 row)
+
+postgres=# explain (costs off) select * from t where b like 'A%';
+         QUERY PLAN          
+-----------------------------
+ Seq Scan on t
+   Filter: (b ~~ 'A%'::text)
+(2 rows)
+```
+
+
+我们可以通过使用操作符类“ text_pattern_ops”创建索引来克服此限制（注意执行计划中的条件的变化）：
+
+
+```SQL
+postgres=# create index on t(b text_pattern_ops);
+
+postgres=# explain (costs off) select * from t where b like 'A%';
+                           QUERY PLAN                          
+----------------------------------------------------------------
+ Bitmap Heap Scan on t
+   Filter: (b ~~ 'A%'::text)
+   ->  Bitmap Index Scan on t_b_idx1
+         Index Cond: ((b ~>=~ 'A'::text) AND (b ~<~ 'B'::text))
+(4 rows)
+```
