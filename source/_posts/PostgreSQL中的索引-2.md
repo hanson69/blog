@@ -73,9 +73,7 @@ postgres=# select a.amname, p.name, pg_indexam_has_property(a.oid,p.name)
 
 ```SQL
 postgres=# select p.name, pg_index_has_property('t_a_idx'::regclass,p.name)
-            from unnest(array[
-                        'clusterable','index_scan','bitmap_scan','backward_scan'
-                            ]) p(name);
+           from unnest(array['clusterable','index_scan','bitmap_scan','backward_scan']) p(name);
      name      | pg_index_has_property
 ---------------+-----------------------
  clusterable   | t
@@ -99,12 +97,11 @@ postgres=# select p.name, pg_index_has_property('t_a_idx'::regclass,p.name)
 
 
 ```SQL
-postgres=# select p.name,
-     pg_index_column_has_property('t_a_idx'::regclass,1,p.name)
-from unnest(array[
-       'asc','desc','nulls_first','nulls_last','orderable','distance_orderable',
-       'returnable','search_array','search_nulls'
-     ]) p(name);
+postgres=# select p.name, pg_index_column_has_property('t_a_idx'::regclass,1,p.name)
+			from unnest(array[
+			'asc','desc','nulls_first','nulls_last','orderable','distance_orderable',
+			'returnable','search_array','search_nulls'
+			]) p(name);
         name        | pg_index_column_has_property
 --------------------+------------------------------
  asc                | t
@@ -249,13 +246,13 @@ postgres=# select opcname, opcintype::regtype
 
 ```SQL
 postgres=# select amop.amopopr::regoperator
-from pg_opclass opc, pg_opfamily opf, pg_am am, pg_amop amop
-where opc.opcname = 'array_ops'
-and opf.oid = opc.opcfamily
-and am.oid = opf.opfmethod
-and amop.amopfamily = opc.opcfamily
-and am.amname = 'btree'
-and amop.amoplefttype = opc.opcintype;
+			from pg_opclass opc, pg_opfamily opf, pg_am am, pg_amop amop
+			where opc.opcname = 'array_ops'
+			and opf.oid = opc.opcfamily
+			and am.oid = opf.opfmethod
+			and amop.amopfamily = opc.opcfamily
+			and am.amname = 'btree'
+			and amop.amoplefttype = opc.opcintype;
         amopopr        
 -----------------------
  <(anyarray,anyarray)
