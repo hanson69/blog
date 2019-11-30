@@ -3,14 +3,15 @@ title: 【翻译】PostgreSQL中的索引-2
 date: 2019-11-27 13:11:03
 categories: PG基础
 tags:
-- 索引
-- 访问方法的属性
+- 访问方法
+- 属性
+- 操作符类和族
 ---
 
 
 在第一篇文章中，我们提到了访问方法必须提供有关其自身的信息。让我们看一下访问方法接口的结构。
 
-# 性质
+# 属性
 
 访问方法的所有属性都存储在“pg_am”表中（“am”：access method）。我们还可以从同一张表中获得可用方法的列表：
 
@@ -37,7 +38,7 @@ postgres=# select amname from pg_am;
 - 特定索引的属性—«pg_index_has_property»
 - 索引各列的属性—«pg_index_column_has_property»
 
-未来，访问方法层和索引层是分开的：到目前为止，所有基于一种访问方法的索引将始终具有相同的属性。
+以后，访问方法层和索引层将是分开的：到目前为止，所有基于一种访问方法的索引将始终具有相同的属性。
 
 以下四个属性是访问方法的属性（以«btree»为例）：
 
@@ -124,7 +125,7 @@ from unnest(array[
 - distance_orderable。
 可以按照操作确定的排序顺序返回结果（到目前为止仅适用于GiST和RUM索引）。
 - returnable。
-在不访问表的情况下使用索引的可能性，即 index-only scans 的支持。
+使用索引而不访问表的可能性，即 index-only scans 的支持。
 - search_array。
 支持使用表达式 «indexed-field IN (list_of_constants)» 搜索多个值，这与 «indexed-field = ANY(array_of_constants)»相同。
 - search_nulls。
@@ -134,7 +135,7 @@ from unnest(array[
 
 # 操作符类和族
 
-除了接口公开的访问方法的属性之外，还需要了解访问方法接受哪些数据类型和哪些操作符。为此，PostgreSQL引入了操作符类和操作符族的概念。
+除了接口公开的访问方法的属性之外，还需要了解访问方法接受哪些数据类型和哪些操作符（operator）。为此，PostgreSQL引入了操作符类和操作符族的概念。
 
 操作符类包含用于索引的最小运算符集（可能还有辅助函数），以操作某种数据类型。
 
@@ -163,12 +164,12 @@ postgres=# select opfname, opcname, opcintype::regtype
 
 ```SQL
 postgres=# select opfname, opcname, opcintype::regtype
-from pg_opclass opc, pg_opfamily opf
-where opf.opfname = 'datetime_ops'
-and opc.opcfamily = opf.oid
-and opf.opfmethod = (
-      select oid from pg_am where amname = 'btree'
-    );
+            from pg_opclass opc, pg_opfamily opf
+            where opf.opfname = 'datetime_ops'
+            and opc.opcfamily = opf.oid
+            and opf.opfmethod = (
+                  select oid from pg_am where amname = 'btree'
+                );
    opfname    |     opcname     |          opcintype          
 --------------+-----------------+-----------------------------
  datetime_ops | date_ops        | date
@@ -182,7 +183,7 @@ and opf.opfmethod = (
 
 在大多数情况下，我们不需要知道任何关于操作符族和类的信息。通常我们只是创建一个索引，默认情况下使用某个操作符类。
 
-但是，我们可以显式地指定operator类。这是一个需要显式规范的简单示例：在 collation 不是 C 的数据库中，常规索引不支持LIKE操作：
+但是，我们可以显式地指定操作符类。这是一个需要显式规范的简单示例：在 collation 不是 C 的数据库中，常规索引不支持LIKE操作：
 
 
 ```SQL
@@ -216,3 +217,55 @@ postgres=# explain (costs off) select * from t where b like 'A%';
          Index Cond: ((b ~>=~ 'A'::text) AND (b ~<~ 'B'::text))
 (4 rows)
 ```
+
+
+系统目录
+
+总结了系统目录中与操作符类和族直接相关的表的简化图。  
+
+![操作符类和族](PostgreSQL中的索引-2/操作符类和族.png)
+
+不用说，所有这些表都已详细描述。
+
+系统目录使我们无需查找文档即可找到许多问题的答案。例如，某种访问方法可以操纵哪些数据类型？
+
+
+```SQL
+postgres=# select opcname, opcintype::regtype
+            from pg_opclass
+            where opcmethod = (select oid from pg_am where amname = 'btree')
+            order by opcintype::regtype::text;
+       opcname       |          opcintype          
+---------------------+-----------------------------
+ abstime_ops         | abstime
+ array_ops           | anyarray
+ enum_ops            | anyenum
+...
+```
+
+
+运算符类包含哪些运算符（因此，索引访问可用于包含该运算符的条件）？
+
+
+```SQL
+postgres=# select amop.amopopr::regoperator
+from pg_opclass opc, pg_opfamily opf, pg_am am, pg_amop amop
+where opc.opcname = 'array_ops'
+and opf.oid = opc.opcfamily
+and am.oid = opf.opfmethod
+and amop.amopfamily = opc.opcfamily
+and am.amname = 'btree'
+and amop.amoplefttype = opc.opcintype;
+        amopopr        
+-----------------------
+ <(anyarray,anyarray)
+ <=(anyarray,anyarray)
+ =(anyarray,anyarray)
+ >=(anyarray,anyarray)
+ >(anyarray,anyarray)
+(5 rows)
+```
+
+
+# 英文地址：
+https://habr.com/en/company/postgrespro/blog/442546/
