@@ -216,7 +216,7 @@ postgres=# explain (costs off) select * from t where b like 'A%';
 ```
 
 
-系统目录
+# 系统目录
 
 总结了系统目录中与操作符类和族直接相关的表的简化图。  
 
