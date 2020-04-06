@@ -11,7 +11,7 @@ tags:
 ---
 
 SQL语句的执行经过词法分析、语法分析生成语法树，再经过语义分析会生成查询树，函数调用流程如下：
-```
+```C
 exec_simple_query
     |-> pg_parse_query  --> 生成语法树，返回raw_parsetree_list
         |-> raw_parser
@@ -41,7 +41,7 @@ postgres=# SELECT id, data FROM tbl_a WHERE id < 300 ORDER BY data;
 
 
 select语法在gram.y中定义如下：
-```
+```C
 // SELECT 语句通过标识符SelectStmt表示，定义为带括号的SELECT语句（用标识符 select_with_parens 表示）和不带括号的SELECT语句（用标识符select_no_parens表示）
 
 SelectStmt: select_no_parens			%prec UMINUS
@@ -199,7 +199,7 @@ typedef struct SelectStmt
 
 ### opt_all_clause
 
-```
+```C
 // 本select语句中匹配为空
 opt_all_clause:
 			ALL										{ $$ = NIL;}
@@ -210,7 +210,7 @@ opt_all_clause:
 ### target_list
 实例中id, data字段对应target_list，target_list可以由若干个target_el组成，通过逗号分隔。
 
-```
+```C
 // 匹配到target_list
 opt_target_list: target_list						{ $$ = $1; }
 			| /* EMPTY */							{ $$ = NIL; }
@@ -376,7 +376,7 @@ typedef struct ColumnRef
 
 ### into_clause
 该select实例中没有into语句，所以匹配为空。
-```
+```C
 into_clause:
 			INTO OptTempTableName
 				{
@@ -396,7 +396,7 @@ into_clause:
 
 ### from_clause
 
-```
+```C
 // SELECT语句中的FROM子句对应from_clause标识，from_clause由FROM 关键字和from_Jist组成。
 // from_clause --> from_list
 from_clause:
@@ -525,7 +525,7 @@ typedef struct RangeVar
 
 ### where_clause
 
-```
+```C
 // WHERE子句对应着语法定义中的where_clause标识符，由关键字WHERE和一个表达式（标识符a_expr）组成。
 where_clause:
 			WHERE a_expr							{ $$ = $2; }
@@ -619,7 +619,7 @@ typedef struct A_Expr
 
 ### group_clause
 该例子中没有group by子句，所以匹配为空。
-```
+```C
 group_clause:
 			GROUP_P BY group_by_list				{ $$ = $3; }
 			| /*EMPTY*/								{ $$ = NIL; }
@@ -628,7 +628,7 @@ group_clause:
 ### having_clause
 该例子中没有having子句，所以匹配为空。
 
-```
+```C
 having_clause:
 			HAVING a_expr							{ $$ = $2; }
 			| /*EMPTY*/								{ $$ = NULL; }
@@ -637,7 +637,7 @@ having_clause:
 
 ### sort_clause
 
-```
+```C
 // ORDER BY子句对应于sort_clause标识符，由关键字 "ORDER BY" 和 sortby_list 标识符组成。
 sort_clause:
 			ORDER BY sortby_list					{ $$ = $3; }
@@ -704,7 +704,7 @@ opt_nulls_order: NULLS_LA FIRST_P			{ $$ = SORTBY_NULLS_FIRST; }
 ```
 
 SortBy结构体定义：
-```
+```C
 typedef struct SortBy
 {
 	NodeTag		type;
@@ -715,11 +715,11 @@ typedef struct SortBy
 	int			location;		/* operator location, or -1 if none/unknown */
 } SortBy;
 ```
-
+### 最终语法树
 ![](PG语法树的生成/2020-04-06-12-58-29.png)
 
 最终执行后的语法树生成如下（RawStmt结构体，包含了SelectStmt结构体，即语法树的主体）
-```js
+```C
 {RAWSTMT
 :stmt 
 {SELECT
