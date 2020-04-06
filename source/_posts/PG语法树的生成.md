@@ -42,7 +42,9 @@ postgres=# SELECT id, data FROM tbl_a WHERE id < 300 ORDER BY data;
 
 select语法在gram.y中定义如下：
 ```C
-// SELECT 语句通过标识符SelectStmt表示，定义为带括号的SELECT语句（用标识符 select_with_parens 表示）和不带括号的SELECT语句（用标识符select_no_parens表示）
+// SELECT 语句通过标识符SelectStmt表示，
+// 定义为带括号的SELECT语句（用标识符 select_with_parens 表示）和
+// 不带括号的SELECT语句（用标识符select_no_parens表示）
 
 SelectStmt: select_no_parens			%prec UMINUS
 			| select_with_parens		%prec UMINUS
@@ -56,7 +58,8 @@ select_with_parens:
 			| '(' select_with_parens ')'			{ $$ = $2; }
 		;
 
-// 不带括号的SELECT语句可以定义为一条简单的SELECT语句（用标识符simple_select表示），也可以定义为在SELECT后接排序子句（用标识符sort_clause表示）等构成的复杂语句。
+// 不带括号的SELECT语句可以定义为一条简单的SELECT语句（用标识符simple_select表示），
+// 也可以定义为在SELECT后接排序子句（用标识符sort_clause表示）等构成的复杂语句。
 
 // 本例子中select语句匹配simple_select的语法定义。
 select_no_parens:
@@ -76,7 +79,11 @@ select_clause:
 			| select_with_parens					{ $$ = $1; }
 		;
 
-// simple_select由如下子句组成：去除行重复的DISTINCT（标识符opt_distinct）、目标属性（标识符target_list）、SELECT INTO子句（标识符into_clause）、FROM子句（标识符from_clause）、WHERE子句（标识符where_clause）、GROUP BY子句（标识符group_clause）、HAVING子句（标识符having_clause）和窗口子句（标识符window_clause）。
+// simple_select由如下子句组成：去除行重复的DISTINCT（标识符opt_distinct）、
+// 目标属性（标识符target_list）、SELECT INTO子句（标识符into_clause）、
+// FROM子句（标识符from_clause）、WHERE子句（标识符where_clause）、
+// GROUP BY子句（标识符group_clause）、HAVING子句（标识符having_clause）和
+// 窗口子句（标识符window_clause）。
 
 // 在匹配simple_select 语法结构后，将创建一个SelectStmt结构体，并将各子句赋值到结构体中相应的字段。
 simple_select:
@@ -285,7 +292,10 @@ c_expr:		columnref								{ $$ = $1; }
 			
 		;
 // columnref --> ColId，创建 ColumnRef 结构体。
-// 因此，$$->val = (Node *)$1 --> $$->val = (Node *)a_expr --> $$->val = (Node *)c_expr --> $$->val = (Node *)columnref  --> $$->val = (Node *)ColId --> $$->val = (Node *)ColumnRef --> ResTarget->val = (Node *)ColumnRef
+// 因此，$$->val = (Node *)$1 --> $$->val = (Node *)a_expr -->
+// $$->val = (Node *)c_expr --> $$->val = (Node *)columnref  --> 
+// $$->val = (Node *)ColId --> $$->val = (Node *)ColumnRef --> 
+// ResTarget->val = (Node *)ColumnRef
 // 最终，ResTarget 结构体中的val成员指向 ColumnRef 结构体
 columnref:	ColId
 				{
@@ -719,7 +729,7 @@ typedef struct SortBy
 ![](PG语法树的生成/2020-04-06-12-58-29.png)
 
 最终执行后的语法树生成如下（RawStmt结构体，包含了SelectStmt结构体，即语法树的主体）
-```C
+```SHELL
 {RAWSTMT
 :stmt 
 {SELECT
