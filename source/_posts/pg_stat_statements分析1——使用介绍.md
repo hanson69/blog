@@ -8,8 +8,8 @@ tags:
 - 性能跟踪
 ---
 
-## 简介
-pg_stat_statements用于跟踪性能问题。慢查询日志不会像pg_stat_statements那样有用，因为慢查询日志只会指向单个慢查询，不会向我们显示由大量中等查询引起的问题。因此，建议始终打开此模块。pg_stat_statements开销很小，绝不会破坏系统的整体性能。
+# 简介
+pg_stat_statements用于跟踪性能问题，比慢查询日志更加实用，因为慢查询日志只会指向单个慢查询，不会向我们显示由大量中等查询引起的问题。因此，建议始终打开此模块。pg_stat_statements开销很小，绝不会破坏系统的整体性能。
 
 pg_stat_statements插件必须通过在postgresql.conf的shared_preload_libraries中增加pg_stat_statements来载入，然后重启PG。
 
@@ -17,7 +17,7 @@ pg_stat_statements插件还提供了一个视图 pg_stat_statements插件 用于
 插件收集的统计信息，该视图不是全局可用的，需要通过CREATE EXTENSION
 pg_stat_statements 为启用。
 
-## pg_stat_statements视图
+# pg_stat_statements视图
 ```
 postgres=# \d pg_stat_statements
                     View "public.pg_stat_statements"
@@ -73,7 +73,7 @@ temp_blks_***：提供了有关临时文件I/O的信息。注意，临时文件I
 
 blk_***_time：包含有关I/O计时的信息。默认情况下，这两个字段为空。原因是在某些系统上，测量计时可能会涉及很多开销。因此，track_io_timing的默认值为false。
 
-## 查询实例
+# 查询实例
 ```SQL
 SELECT round((100 * total_time / sum(total_time) OVER ())::numeric, 2) percent,
 	round(total_time::numeric, 2) AS total,

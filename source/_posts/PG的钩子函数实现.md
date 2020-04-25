@@ -11,7 +11,7 @@ PostgreSQL中提供了很多种钩子函数，使用hook可以修改PostgreSQL�
 
 这里以PG自带的auth_delay插件为例（contrib/auth_delay/auth_delay.c），介绍如何使用钩子函数。
 
-## 1.在内核中挂载钩子
+# 1.在内核中挂载钩子
 PG在对客户端连接认证后，会返回一个认证状态（status），如果认证状态非正常，则可以进行延时处理，客户端必须等待一会儿时间才能继续进行连接，这样防止恶意用户通过连续的连接尝试密码破解。
 
 PG中所有认证方法都在ClientAuthentication函数中调用，并在认证方法后，预置一个ClientAuthentication_hook钩子函数，对认证状态进行处理。
@@ -48,16 +48,9 @@ ClientAuthentication(Port *port)
 		auth_failed(port, status, logdetail);
 ```
 
-## 2.钩子实现过程
+# 2.钩子实现过程
 
-PostgreSQL加载插件到共享库的两种方式：
-> 1、create extension xxxx；
-> 
-> 2、配置文件中shared_preload_libraries参数来加载共享库；
-
-
-
-### 2.1 实现_PG_init函数
+## 2.1 实现_PG_init函数
 加载共享库会调用_PG_init函数。
 ```c
 /*
@@ -83,7 +76,7 @@ _PG_init(void)
 	ClientAuthentication_hook = auth_delay_checks;
 }
 ```
-#### 设置配置项（非必须）
+### 设置配置项（非必须）
 根据需求，可以调用DefineCustomIntVariable函数设置GUC配置项，配置一些全局变量，供程序使用。
 
 ```
@@ -137,13 +130,13 @@ superuser： 这些设置可以从postgresql.conf设置，或者在会话中用S
 user： 这些设置可以从postgresql.conf设置，或者在会话中用SET命令设置。任何用户都被允许 修改它们的会话本地值。仅当没有通过SET设置会话本地值时，postgresql.conf中的改变 才会影响现有的会话。
 
 
-#### 保存之前的钩子
+### 保存之前的钩子
 因为在一个钩子挂载位置，可能使用了多个钩子，所以需要保存之前的钩子，让其执行完后，再执行下一个钩子函数。
 
-### 2.2 添加 PG_MODULE_MAGIC
+## 2.2 添加 PG_MODULE_MAGIC
 在插件代码文件中添加PG_MODULE_MAGIC。
 
-### 2.3 实现钩子函数逻辑
+## 2.3 实现钩子函数逻辑
 功能：如果认证错误，则sleep指定的时间。
 
 首先要执行之前的钩子函数，然后再执行当前钩子。
@@ -171,8 +164,8 @@ auth_delay_checks(Port *port, int status)
 }
 ```
 
-## 加载插件
-PG启动时会加载共享库，调用_PG_init函数。
+# 加载插件
+配置GUC文件中shared_preload_libraries参数来加载共享库，启动进行加载共享库，调用_PG_init函数。
 ```
 /*
  * Load the specified dynamic-link library file, unless it already is
