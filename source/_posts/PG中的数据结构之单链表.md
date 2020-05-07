@@ -1,7 +1,7 @@
 ---
-title: PG中的数据结构之——单链表
+title: PG中的数据结构之单链表
 date: 2020-05-07 22:51:24
-categories: PG
+categories: PG源码
 tags:
 - 线性表
 - 链式存储
