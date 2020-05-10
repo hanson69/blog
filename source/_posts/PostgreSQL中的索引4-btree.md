@@ -1,5 +1,5 @@
 ---
-title: 【转载】PostgreSQL中的索引4-btree
+title: 【翻译】PostgreSQL中的索引4-btree
 date: 2020-05-10 19:51:24
 categories: PG基础
 tags:
@@ -652,7 +652,7 @@ select * from aircrafts where aircraft_code in ('733','763','773');
 
 
 让我们考虑bookings预订表：
-
+```
 demo=# \d bookings
 
               Table "bookings.bookings"
@@ -674,12 +674,12 @@ Indexes:
 Referenced by:
 
     TABLE "tickets" CONSTRAINT "tickets_book_ref_fkey" FOREIGN KEY (book_ref) REFERENCES bookings(book_ref)
-
+```
 
 在此表中，主键（book_ref，booking code预订代码）由常规的«btree»索引提供。让我们创建一个带有附加列的新唯一索引：
-
+```
 demo=# create unique index bookings_pkey2 on bookings(book_ref) INCLUDE (book_date);
-
+```
 
 现在，我们用一个新的索引替换现有的索引（在事务中，同时应用所有更改）：
 
@@ -1163,9 +1163,9 @@ from bt_page_items('ticket_flights_pkey',164) limit 5;
 
 第一个元素与技术有关，并指定块中所有元素的上限（我们未讨论的实现细节），而数据本身以第二个元素开头。显然，最左边的子节点是块163，然后是块323，依此类推。反过来，可以使用相同的函数进行探索。
 
-现在，遵循一个良好的传统，阅读文档，README（https://git.postgresql.org/gitweb/?p=postgresql.git;a=blob;f=src/backend/access/nbtree/README;hb=HEAD）和源代码。
+现在，遵循一个良好的传统，阅读文档，README（ https://git.postgresql.org/gitweb/?p=postgresql.git;a=blob;f=src/backend/access/nbtree/README;hb=HEAD ） 和源代码。
 
-还有一个更有用的扩展是“ amcheck ”，它将整合到PostgreSQL 10中，对于较低版本，可以从github（https://github.com/petergeoghegan/amcheck）获得。此扩展检查B树中数据的逻辑一致性，并使我们能够提前检测到故障。
+还有一个更有用的扩展是“ amcheck ”，它将整合到PostgreSQL 10中，对于较低版本，可以从github（ https://github.com/petergeoghegan/amcheck ）获得。此扩展检查B树中数据的逻辑一致性，并使我们能够提前检测到故障。
 
 确实如此，«amcheck»是PostgreSQL从版本10开始的一部分。
 
