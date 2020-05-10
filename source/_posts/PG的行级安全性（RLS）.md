@@ -1,17 +1,18 @@
 ---
-title: PG的行级安全性（RLS）
+title: 【翻译】PG的行级安全性（RLS）
 date: 2020-05-10 22:51:24
 categories: PG基础
 tags:
 - 行级安全性
 - RLS
+- 多租户
 ---
 
 生活中有这样一个场景需求：部门的领导只能看到自己部门的数据，不可以查看公司的所有数据。
 
 针对这个场景，PG的行级安全性（Row-level security ，RLS）能够以快速，简单的方式构建多租户系统，可以为这些权限配置相关的策略。
 
-创建策略语法：
+# 创建策略语法
 
 
 ```SQL
@@ -26,7 +27,7 @@ CREATE POLICY name ON table_name
     [ USING ( using_expression ) ]
     [ WITH CHECK ( check_expression ) ]
 ```
-
+# USING子句
 首先以超级用户身份登录并创建一个包含几个记录的表：
 
 ```SQL
@@ -97,6 +98,7 @@ postgres=> SELECT * FROM  t_person;
 
 策略允许哪些操作执行（本例为SELECT子句）。然后是USING子句，定义了允许joe角色看到的内容。因此，USING子句是附加到每个查询的强制性过滤器，仅用于选择用户应该看到的行。
 
+# PERMISSIVE 和 RESTRICTIVE
 如果不止一个策略，PostgreSQL将使用OR条件。即更多策略将看到更多数据。用户可以选择是否将条件连接为OR和AND（PERMISSIVE 和 RESTRICTIVE）
 
 默认是PERMISSIVE，即OR状态。如果使用RESTRICTIVE，那么这些子句将与AND关联。
@@ -124,7 +126,7 @@ postgres=> SELECT * FROM  t_person;
         | R2- D2
 (3 rows)
 ```
-
+# RLS的执行计划
 查看查询的执行计划
 
 ```SQL
@@ -137,6 +139,7 @@ postgres=> explain SELECT * FROM  t_person;
 ```
 如上所见，两个USING子句均已添加为查询的强制性过滤器。
 
+# CHECK子句
 在语法定义中有两种类型的子句：
 
 - USING：此子句过滤已存在的行。这与SELECT和UPDATE子句相关。
@@ -167,6 +170,7 @@ INSERT INTO t_person VALUES ('female', 'maria');
 INSERT 0 1
 ```
 
+# RETURNING子句的陷阱
 但是，也有一个陷阱。考虑下面的例子
 
 ```SQL
@@ -175,7 +179,7 @@ ERROR:  new row violates row-level security policy for table "t_person"
 ```
 因为joe角色仅可以查看男性记录，只有男人记录才能使用RETURNING *子句。这里的麻烦是该语句将返回一个女人，这是不允许的。
 
-查看表的相关权限信息
+# 查看表的权限信息
 ```SQL
 postgres=> \z t_person
 Access privileges
@@ -205,7 +209,7 @@ Policies          | joe_pol_1 (r):                                             +
 - x：用于引用;
 - t: 用于触发器
 
-
+# REASSIGN功能
 删除joe角色
 
 ```SQL
