@@ -1,5 +1,5 @@
 ---
-title: 【翻译】PostgreSQL中的索引-3（哈希）
+title: 【翻译】PostgreSQL中的索引3——哈希索引
 date: 2019-12-01 16:47:27
 categories: PG基础
 tags:

@@ -1,5 +1,5 @@
 ---
-title: 【翻译】PostgreSQL中的索引-1
+title: 【翻译】PostgreSQL中的索引1——索引应用
 date: 2019-11-13 23:17:47
 categories: PG基础
 tags:
