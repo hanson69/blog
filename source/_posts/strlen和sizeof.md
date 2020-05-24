@@ -1,5 +1,5 @@
 ---
-title: &和|不同于&&和||
+title: strlen和sizeof
 date: 2020-05-24 14:47:27
 categories: C语言
 tags:
