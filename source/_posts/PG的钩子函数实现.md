@@ -197,8 +197,5 @@ internal_load_library(const char *libname)
 
 ## 详细文档
 
-<br>
-{% pdf Hooks_in_postgresql.pdf %} 
-</br>
 
 
